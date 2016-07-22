@@ -1,0 +1,145 @@
+#######################################
+#                                     #
+#     Rapports Isatis par service     #
+#                                     #
+#######################################
+
+
+
+#charger fonctions et librairies
+source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/fonctions ISATIS.R")
+#charger aussi les objects necessaires:
+#source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/objects Isatis.R")
+
+
+
+#RAPPORT AVEC SOCIO ET RESULTAT PAR SERVICE
+
+for(.s in levels(d$service.recode)) {
+  #.s <-  "CHIRURGIE DIGESTIVE"
+  sink(paste0("./res/1",.s,"_ISATIS.txt"))
+  
+  cat (paste (.s, "\n\n********************\n\n"))
+  cat("DESCRIPTION VARIABLES SOCIO : telephone/internet\n\n")
+  fun.socio5(.s,f,d)
+  
+  cat(paste("RESULTATS SCORES TELEPHONE","\n\n\n"))
+  .out <-  fun.score(service=.s, data=f)
+  .out <- apply (.out[, -1], 2, function (x) round (as.numeric (x), 2))
+  row.names(.out)<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                     "commodité de la chambre","restauration hospitalière","score final")
+  print (.out)
+  cat("\n\n********************\n\n")
+  
+  
+  cat(paste("RESULTATS SCORES INTERNET","\n\n\n"))
+  .out2 <-  fun.score(service=.s, data=d)
+  .out2 <- apply (.out[, -1], 2, function (x) round (as.numeric (x), 2))
+  row.names(.out2)<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                      "commodité de la chambre","restauration hospitalière","score final")
+  print (.out2)
+  cat("\n\n********************\n\n")
+  
+  sink()
+}
+
+#DESCRIPTION SOCIO PAR SERVICE
+#Enregistre variables socio par service dans un fichier texte
+#internet
+sink ("./res/internet.service.socio.txt")
+sapply (levels (d$service.recode), fun.socio3, data=d)
+sink()
+#telephone
+sink ("./res/telephone.service.socio.txt")
+sapply (levels (d$service.recode), fun.socio3, data=f)
+sink()
+#ensemble
+sink ("./res/all.telint.service.socio.txt")
+sapply (levels (d$service.recode), fun.socio4, data1=f, data2=d)
+sink()
+
+
+#SORTIR LES RESULTATS DES THEMES PAR SERVICE
+#plusieurs doc excel et 1 feuille txt
+sink ("resultats themes.txt")
+for (.s in levels (d$service.recode)) {
+  .out <-  fun.score(service=.s, data=d)
+  write.xlsx (.out, file=paste0("./res/Isatis.", .s, ".xlsx"), row.names=F, sheetName="resultats themes", append=F)
+  cat (paste (.s, "\n"))
+  .out <- apply (.out[, -1], 2, function (x) round (as.numeric (x), 3))
+  row.names(.out)<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                     "commodité de la chambre","restauration hospitalière","score final")
+  print (.out)
+  cat ("\n\n")
+}
+sink()
+
+#plusieurs doc excel : par service, telephone et internet dans une meme feuille 
+
+
+for (.s in levels (d$service.recode)) {
+  
+  .out <- fun.score(service=.s,data=f)
+  .out2 <-  fun.score(service=.s, data=d)
+  #rownames(.out)
+  .out$result <-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                  "commodité de la chambre","restauration hospitalière","score final")
+  #rownames(.out2)
+  .out2$result <-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                   "commodité de la chambre","restauration hospitalière","score final")
+  for (.c in colnames (.out)) .out[, .c] <- as.vector (.out[, .c])
+  for (.c in colnames (.out2)) .out2[, .c] <- as.vector (.out2[, .c])
+  .jumpline <- rep ("", ncol (.out)) #sauter une ligne a la fin du tableau
+  .title <- c (.s, rep ("", ncol (.out)-1)) 
+  .title2 <- c("Resultat score telephone",rep ("", ncol (.out)-1))
+  .title3 <- c("Resultat score internet",rep ("", ncol (.out2)-1))
+  
+  .bind <- rbind(.title,.jumpline,.title2,colnames(.out),.out,.jumpline,.title3,colnames(.out2),.out2)
+  
+  write.xlsx (.bind, file=paste0("./res/2Isatis.", .s, ".xlsx"), col.names=F,row.names=F, sheetName="resultats themes", append=F)    
+}
+
+#EXPORTER SOUS UNE SEULE FEUILLE excel
+.res <- data.frame (do.call (rbind, lapply (levels (d$service.recode), function (.s) {   
+  .out <-  fun.score(service=.s, data=d)
+  for (.c in colnames (.out)) .out[, .c] <- as.vector (.out[, .c]) #car sinon facteurs et ne peut pas mettre des facteurs l'un sur l'autres
+  .out$result <-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                  "commodité de la chambre","restauration hospitalière","score final")    
+  .title <- c (.s, rep ("", ncol (.out)-1)) #nom du service
+  .jumpline <- rep ("", ncol (.out)) #sauter une ligne a la fin du tableau
+  #  browser()
+  .out <- rbind (as.character (.title), colnames (.out), .out, .jumpline) #pourquoi as.character?      
+})))
+write.xlsx (.res, file=paste0("Isatis.themes4.xlsx"), row.names=F, col.names=F, sheetName="resultats themes", append=F)
+write.xlsx (.res, file="./res/all.Isatis.themes.xlsx", row.names=F, col.names=F, sheetName="resultats themes", append=F) #pour mettre dans sous dossier .res
+
+
+
+#EXPORTER RESULTATS DANS FEUILLE TXT
+#telephone
+sink ("./res/all.telephone.service.restheme.txt")
+cat(paste("RESULTATS TELEPHONE","\n\n\n"))
+for (.s in levels (f$service.recode)) {
+  cat (paste (.s, "\n"))
+  .out <-  fun.score(service=.s, data=f)
+  .out <- apply (.out[, -1], 2, function (x) round (as.numeric (x), 2))
+  rownames(.out)<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                    "commodité de la chambre","restauration hospitalière","score final")
+  print (.out)
+  cat ("\n\n")
+}
+sink()
+
+#internet
+sink ("./res/all.internet.service.restheme.txt")
+cat(paste("RESULTATS INTERNET","\n\n\n"))
+for (.s in levels (d$service.recode)) {
+  cat (paste (.s, "\n"))
+  .out <-  fun.score(service=.s, data=d)
+  .out <- apply (.out[, -1], 2, function (x) round (as.numeric (x), 2))
+  rownames(.out)<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+                    "commodité de la chambre","restauration hospitalière","score final")
+  print (.out)
+  cat ("\n\n")
+}
+sink()
