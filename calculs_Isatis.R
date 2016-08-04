@@ -282,26 +282,30 @@ write.table(print(tab.theme),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 
 #COEFFICIENT DE CROHNBACH
-set.seed(12345)
-crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000))))
-#Test de permutation cronbach
 
-#genere les 10E6 permutations cronbach et enregistre le resultat du test et les valeurs de tous les elements de l'echantillon
+#CALCUL DES CRONBACH et 95%CI
+set.seed(12345)
+crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000)))) #nb : les alpha sont calculés de la meme facon que dans le tableau du test de permutation ci dessous
+
+#P VALUE CRONBACH : TEST DE PERMUTATION
+#1/GENERE les 10E6 permutations cronbach, calcul (ni,alphai,nt,alphat,diff,pval,n_perm), et enregistre les 10E6 perm ([[1]]) et (ni,alphai,nt,alphat,diff,pval,n_perm) [[2]]
 set.seed(1234)
 for (i in 1:6){
-  res.perm<-perm.cronbach.theme(x=i,1000000)
+  res.perm<-perm.cronbach.theme(x=i,1000000) #le resultat est une liste :[[1]] 10E6 valeur de permutation [[2]]tableau de résultat
   saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))
 }
 res.perm<-perm.cronbach.fin(1000000)
 saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
 
-#assigne le tableau de cronbach a res.perm1:6 et res.permfin
+#2/lecture des Pvalue : assigne le tableau de cronbach a res.perm1:6 et res.permfin
+.set<-"C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/"
 for (i in 1:6){
-  assign((paste0("res.perm",i)),readRDS(paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]])
+  assign((paste0("res.perm",i)),readRDS(paste0(.set,"perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
 }
-res.permfin<-readRDS("perm10E6.pval.cronbach.fin.Rdata")[[2]]
+res.permfin<-readRDS(paste0(.set,"perm10E6.pval.cronbach.fin.Rdata"))[[2]]
+getwd()
 
-#colle tous les tableaux cronbach
+#3/crée un seul tableau cronbach avec ni,alphai,nt,alphat,diff,pval,n_perm (seul pval est utilisé dans le manuscrit)
 for (i in c(1:6,"fin")){
   tab<-get(paste0("res.perm",i))
   if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
