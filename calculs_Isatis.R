@@ -282,32 +282,9 @@ write.table(print(tab.theme),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 
 #COEFFICIENT DE CROHNBACH
+set.seed(12345)
+crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000))))
 
-#internet
-dfcrI <-data.frame(sapply(1:6,function(x)cronbach2(get(paste0("vI",x)),d$Duree))) #attention il faut rectifier car ici vI n'elimine pas les item<15
-#dfcrI <-data.frame(sapply(1:6,function(x)cronbach2(get(paste0("vI",x)),d$Duree[d$nitems>=15])))
-dtotI <- t(data.frame(cronbach(vItot))) #cronbach : retire le r?sultat si 1 item ou plus NA. vItot: exclu d$Duree<2
-tabI <- cbind(dfcrI,dtotI) ; tabI
-
-theme_I <- c(paste0("theme",1:6),"score final")
-tabdfcrI <- as.data.frame (t(rbind(theme_I,tabI)))
-for (.c in colnames (tabdfcrI)) tabdfcrI[, .c] <- unlist (tabdfcrI[, .c])
-for (.c in 2:4) tabdfcrI[, .c] <- as.numeric (tabdfcrI[, .c])
-colnames(tabdfcrI) <-c("theme_I","sample.size","number.of.items","alpha")
-write.table(print(tabdfcrI),file="clipboard",sep="\t",dec=".",row.names=FALSE)
-
-#telephone
-dfcrT <- data.frame(sapply(1:6,function(x)cronbach2(get(paste0("vT",x)),f$Duree)))
-#dfcrT <- data.frame(sapply(1:6,function(x)cronbach2(get(paste0("vT",x)),f$Duree[f$nitems>=15])))
-dtotT <- t(data.frame(cronbach(vTtot))) 
-tabT <- cbind(dfcrT,dtotT) ; tabT
-
-theme_T <- c(paste0("theme",1:6),"score final")
-tabdfcrT <- as.data.frame(t(rbind(theme_T,tabT)))
-for (.c in colnames (tabdfcrT)) tabdfcrT[, .c] <- unlist (tabdfcrT[, .c])
-for (.c in 2:4) tabdfcrT[, .c] <- as.numeric (tabdfcrT[, .c])
-colnames(tabdfcrT) <-c("theme_T","sample.size","number.of.items","alpha")
-write.table(print(tabdfcrT),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 #compare alpha
 compco <- for (i in 1:7) {
