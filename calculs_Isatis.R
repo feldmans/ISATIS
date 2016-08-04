@@ -284,19 +284,30 @@ write.table(print(tab.theme),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 #COEFFICIENT DE CROHNBACH
 set.seed(12345)
 crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000))))
+#Test de permutation cronbach
 
-
-#compare alpha
-compco <- for (i in 1:7) {
-  vec.ait<- as.numeric(c(tabI[3,i], tabT [3,i]))
-  vec.nit<- as.numeric(c(tabI[1,i],tabT[1,i]))
-  vec.i<-as.numeric(c(tabI[2,i],tabT[2,i]))
-  rescoc<-cocron.n.coefficients(alpha=vec.ait,n=vec.nit,items=vec.i)
-  rescoc2<-cbind(rescoc@n,rescoc@alpha)
-  rescoc3<-c(rescoc2[1,], rescoc2[2,],rescoc@p.value)
-  if (i==1) rescron<-rescoc3 else rescron<-rbind(rescron,rescoc3)
+#genere les 10E6 permutations cronbach et enregistre le resultat du test et les valeurs de tous les elements de l'echantillon
+set.seed(1234)
+for (i in 1:6){
+  res.perm<-perm.cronbach.theme(x=i,1000000)
+  saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))
 }
-write.table(print(rescron),file="clipboard",sep="\t",dec=".",row.names=FALSE)
+res.perm<-perm.cronbach.fin(1000000)
+saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
+
+#assigne le tableau de cronbach a res.perm1:6 et res.permfin
+for (i in 1:6){
+  assign((paste0("res.perm",i)),readRDS(paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]])
+}
+res.permfin<-readRDS("perm10E6.pval.cronbach.fin.Rdata")[[2]]
+
+#colle tous les tableaux cronbach
+for (i in c(1:6,"fin")){
+  tab<-get(paste0("res.perm",i))
+  if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
+}
+
+write.table(print(tabcron),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 
 
@@ -365,32 +376,5 @@ table(num.dur2)
 summary(num.dur2)
 wilcox.test(num.dur1,num.dur2)
 summary(c(num.dur1,num.dur2))
-
-
-#Test de permutation cronbach
-
-#genere les 10E6 permutations cronbach et enregistre le resultat du test et les valeurs de tous les elements de l'echantillon
-set.seed(1234)
-for (i in 1:6){
-  res.perm<-perm.cronbach.theme(x=i,1000000)
-  saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))
-}
-res.perm<-perm.cronbach.fin(1000000)
-saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
-
-#assigne le tableau de cronbach a res.perm1:6 et res.permfin
-for (i in 1:6){
-  assign((paste0("res.perm",i)),readRDS(paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]])
-}
-res.permfin<-readRDS("perm10E6.pval.cronbach.fin.Rdata")[[2]]
-
-#colle tous les tableaux cronbach
-for (i in c(1:6,"fin")){
-  tab<-get(paste0("res.perm",i))
-  if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
-}
-
-write.table(print(tabcron),file="clipboard",sep="\t",dec=".",row.names=FALSE)
-
 
 
