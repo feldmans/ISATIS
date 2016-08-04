@@ -18,6 +18,7 @@ cronbach3.boot<- function(data,indices){
 }
 
 
+
 bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
   
   xI<-get(paste0("vI",x))
