@@ -755,7 +755,8 @@ bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
   
   xI<-get(paste0("vI",x))
   xT<-get(paste0("vT",x))
-  if(is.numeric(as.numeric(x))){
+  #if(is.numeric(as.numeric(x))){
+  if(!is.na(as.numeric(x))){
   keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
   keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
   }
@@ -769,7 +770,6 @@ bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
   )
   .res<-boot(data=.df,statistic = cronbach3.boot ,R=R)
 }
-
 BootCronCi <- function(x,R)  {
   .bootres <- bootcron (x=x, R=R)
   .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
@@ -778,7 +778,8 @@ BootCronCi <- function(x,R)  {
   rownames (.res) <- names (.bootres$t0)
   colnames (.res) <- c ("CI_L", "CI_U")
   .res$est <- as.numeric (.bootres$t0)
-  .res$n<-c(sum(!is.na(d[,paste0("res.theme",x)])),sum(!is.na(f[,paste0("res.theme",x)])))
+  if(!is.na(as.numeric(x))).res$n<-c(sum(!is.na(d[,paste0("res.theme",x)])),sum(!is.na(f[,paste0("res.theme",x)])))
+  else .res$n <- c(sum(!is.na(d$res.score.final)),sum(!is.na(f$res.score.final)))
   .res <- .res[, c (4,3, 1, 2)]
   .ans <- round (.res, 2) #fait un arrondi sur chaque valeur
   .ans <- data.frame (N=.res$n, alpha_CI=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
@@ -786,28 +787,13 @@ BootCronCi <- function(x,R)  {
   #sapply(as.vector) realigne en chaine de caracteres
   return (.ans)
 }
-BootCronCi(2,100)
+
+BootCronCi("tot",100)
   
 
 
 
 
 
-cronfunth.boot<-function(data,x){cronbach2(data[x,],2)[[3]]}
-res<-boot(vI1,cronfunth.boot,1000)
-res$t
-
-datafile <- cbind(expsy[,c(1,3:10)],-1*expsy[,2])
-
-library(boot)
-cronbach.boot <- function(data,x) {cronbach(data[x,])[[3]]}
-res <- boot(datafile,cronbach.boot,1000)
-#quantile(res$t,c(0.025,0.975)) ## two-sided bootstrapped confidence interval of Cronbach's alpha
-#boot.ci(res,type="bca") ## adjusted bootstrap percentile (BCa) confidence interval (better)
-
-
-
-
-getwd()
 
 
