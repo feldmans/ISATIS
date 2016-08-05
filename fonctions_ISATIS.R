@@ -21,9 +21,19 @@ library (boot)
 library(cocron)
 
 
-###### NB ######
-#Exemple de calcul d'estimateur par median 
-
+###### NB : méthodes bootstrap utilisées dans le manuscrit ######
+#Exemple de calcul d'estimateur par median : BootCi (mais finalement on a utilisé l'estimateur observé (res$t0))
+#exemple de calcul percentile et Bca : BootCi (finalement on a utilisé la méthode percentile pour tous les bootstraps)
+#Valeurs absolues ou non? oui pour les tests de permutation, non pour les différences de moyennes et effect size
+  #difference de moyenne : pas de valeur absolue 
+  #effect size : pas de valeur absolue (on en avait fait au début, ce qui donnait des valeurs aberrantes)
+  #permutation différence de moyenne : valeur absolue (pour faire test unilatéral (ou le contraire?))
+  #permutation difference de cronbach : valeur absolue ( pour faire test unilatéral (ou le contraire?))
+#set.seed sont dans le script calcul_Isatis et en feuille 2 des fichiers : 
+        #cronbach 2016 08 05.xlsx
+        #
+#pour permutation : R= 1000000 (10E6)
+#pour bootstrap : R=20000 (2*10E4)
 
 #############FONCTION POUR LE CALCUL DES SCORES###############
 
@@ -391,6 +401,22 @@ perm.cronbach.fin<- function (N){
 
 ############CALCUL DES ESTIMATEURS ET IC PAR BOOTSTRAP#############
 
+#Pour tester les fonctions lignes à lignes : 
+#1/ .theme <- "res.theme1" ou .theme<-"res.score.final"
+        #=>lancer la ligne.df
+#2/ .dat<-.df
+        #=>lancer les lignes de la fonction stat àpartir de .dat<- na.omit(.dat) pour tester la fonction stat (indices ne marche pas sans boot)
+        # si ça marche, lancer la fonction stat en entier
+#3/ R<-100 pour tester la fonction boot
+        # lancer .res<-boot(data=.df, statistic=fun.mean, R=R)
+        # on peut rentrer dans .res pour voir l'échantillon bootstrap 
+              #.res$t0 : estimateur
+              #.res$t : les R valeurs
+        #si ça marche, lancer la fonction boot.theme
+#4/Pour tester la fonction BootMCi: lancer la ligne .bootres et les lignes suivantes.
+
+
+
 #MOYENNE DES SCORES
 
 #1. Je cree mon tableau/vecteur de data que j'appelle .df. Ce sera ensuite dans fonction boot
@@ -421,7 +447,7 @@ boot.theme <- function (.theme,R){
 }
 
 
-#Je cree une fonction BootCi qui reintegre resultat de boot.theme et ajoute les IC et met en forme
+#Je cree une fonction BootMCi qui reintegre resultat de boot.theme et ajoute les IC et met en forme
 BootMCi <- function (.theme, R) {
   #  browser()
   .bootres <- boot.theme (.theme=.theme, R=R)
@@ -525,7 +551,7 @@ BootCi <- function (.theme, R) {
 }
 
 
-#ES par BOOTSTRAP AVEC LOG : ATTENTION PAS FAISABLE SANS VALEUR ABS
+#ES par BOOTSTRAP AVEC LOG : ATTENTION PAS FAISABLE SANS VALEUR ABS  
 boot.stat.es.log <- function (data, indices) {  #data=.df
   .dat <- data[indices,]
   .dat <- na.omit (.dat)
@@ -569,18 +595,7 @@ BootCi.log <- function (.theme, R) {
 
 
 
-#ES AVEC LA FONCTION bootES
 
-# fun.es <- function(.theme,R) {
-#   .df <- data.frame (
-#     score=c (d[, .theme], f[, .theme]),
-#     group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
-#     )
-#   .df<- na.omit(.df)
-#   .res <- bootES(data=.df,data.col="score",group.col="group",contrast=c("int","tel"),effect.type="cohens.d.sigma")
-#   return(.res)
-# }
-# fun.es("res.theme1",100)
 
 
 
