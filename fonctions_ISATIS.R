@@ -25,13 +25,13 @@ library(cocron)
 #Exemple de calcul d'estimateur par median : BootCi (mais finalement on a utilisé l'estimateur observé (res$t0))
 #exemple de calcul percentile et Bca : BootCi (finalement on a utilisé la méthode percentile pour tous les bootstraps)
 #Valeurs absolues ou non? oui pour les tests de permutation, non pour les différences de moyennes et effect size
-  #difference de moyenne : pas de valeur absolue 
-  #effect size : pas de valeur absolue (on en avait fait au début, ce qui donnait des valeurs aberrantes)
+  #difference de moyenne (est et IC) : pas de valeur absolue 
+  #effect size (est et IC) : pas de valeur absolue (on en avait fait au début, ce qui donnait des valeurs aberrantes)
   #permutation différence de moyenne : valeur absolue (pour faire test unilatéral (ou le contraire?))
   #permutation difference de cronbach : valeur absolue ( pour faire test unilatéral (ou le contraire?))
 #set.seed sont dans le script calcul_Isatis et en feuille 2 des fichiers : 
-        #cronbach 2016 08 05.xlsx
-        #
+        #2016 08 05 calculs table 2.xlsx
+        #2016 08 05 calculs table 3.xlsx
 #pour permutation : R= 1000000 (10E6)
 #pour bootstrap : R=20000 (2*10E4)
 
@@ -285,7 +285,6 @@ bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
   
   xI<-get(paste0("vI",x))
   xT<-get(paste0("vT",x))
-  #if(is.numeric(as.numeric(x))){
   if(!is.na(as.numeric(x))){
   keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
   keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
@@ -397,6 +396,65 @@ perm.cronbach.fin<- function (N){
   
 }
 
+#1 fonction perm cronbach pour tous les themes et score global (finalement pas utilisée, mais elle marche)
+perm.cronbach<- function (x,N){
+  # x<-1
+  # x<-"tot"
+  xI<-get(paste0("vI",x))
+  xT<-get(paste0("vT",x))
+  
+  #if (is.numeric(x)){   
+  if (!is.na(as.numeric(x))){
+    keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
+    keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
+    keepIT <- rbind(keepI,keepT)
+    obs.cronI<- cronbach3(keepI)
+    obs.cronT<- cronbach3(keepT)
+    diff.obs <- abs(obs.cronI - obs.cronT)
+    
+    .gpe <- rep(c("int","tel"),c(nrow(keepI),nrow(keepT)))
+    
+    perm.test<- function(keepIT=keepIT,.gpe=.gpe){
+      mixgpe <- sample(.gpe,replace = FALSE)
+      int <- keepIT[mixgpe=="int",]
+      tel <- keepIT[mixgpe=="tel",]
+      cri<-cronbach3(int)
+      crt<-cronbach3(tel)
+      abs(cri-crt)
+    }
+  }
+  
+  else {
+    keepI <- xI[!is.na(d$res.score.final),]
+    keepT <- xT[!is.na(f$res.score.final),]
+    keepIT <- rbind(keepI,keepT)
+    obs.cronI<- cronbach(keepI)$alpha
+    obs.cronT<- cronbach(keepT)$alpha
+    diff.obs <- abs(obs.cronI - obs.cronT)
+    
+    .gpe <- rep(c("int","tel"),c(nrow(keepI),nrow(keepT)))
+    
+    perm.test<- function(keepIT=keepIT,.gpe=.gpe){
+      mixgpe <- sample(.gpe,replace = FALSE)
+      int <- keepIT[mixgpe=="int",]
+      tel <- keepIT[mixgpe=="tel",]
+      cri<-cronbach(int)$alpha
+      crt<-cronbach(tel)$alpha
+      abs(cri-crt)
+    }
+  }
+  many.samp<- replicate (N, perm.test(keepIT,.gpe))
+  
+  p.val <- length(many.samp[many.samp>= diff.obs]) / length(many.samp)
+  
+  #quantile(x = many.samp,probs = 0.95)
+  hist(many.samp,main=paste0("Difference cronbach theme",x))
+  abline(v=diff.obs,lwd=2,col=2)
+  
+  #mean(abs(many.samp)>abs(diff.obs))??
+  
+  return(data.frame(ni=nrow(keepI),alphai=obs.cronI,nt=nrow(keepT),alphat=obs.cronT, diff_obs=diff.obs, p_value=p.val,nb_perm=N))
+} 
 
 
 ############CALCUL DES ESTIMATEURS ET IC PAR BOOTSTRAP#############
@@ -414,7 +472,6 @@ perm.cronbach.fin<- function (N){
               #.res$t : les R valeurs
         #si ça marche, lancer la fonction boot.theme
 #4/Pour tester la fonction BootMCi: lancer la ligne .bootres et les lignes suivantes.
-
 
 
 #MOYENNE DES SCORES
@@ -446,7 +503,6 @@ boot.theme <- function (.theme,R){
   return(.res)
 }
 
-
 #Je cree une fonction BootMCi qui reintegre resultat de boot.theme et ajoute les IC et met en forme
 BootMCi <- function (.theme, R) {
   #  browser()
@@ -466,6 +522,7 @@ BootMCi <- function (.theme, R) {
   #sapply(as.vector) realigne en chaine de caracteres
   return (.ans)
 }
+
 
 #DIFFERENCE DES MOYENNES
 boot.stat.diffM<-function(data,indices){
@@ -530,7 +587,6 @@ ES.boot <-  function (.theme, R) {
   return (.res)
 }
 
-
 BootCi <- function (.theme, R) {
   #  browser()
   .bootres <<- ES.boot (.theme=.theme,R=R)
@@ -552,10 +608,86 @@ BootCi <- function (.theme, R) {
 
 
 
+############ TEST DE PERMUTATION DIFFERENCE MOYENNE ##########
+
+# data1<-d
+# data2<-f
+# x<-1
+# N<-100
+
+perm.moyenne.th <- function (x,data1,data2,N){
+  xI<-data1[ , paste0("res.theme",x)]
+  xT<-data2[ , paste0("res.theme",x)]
+  
+  keepI <- na.omit(xI)
+  keepT <- na.omit(xT)
+  keepIT <- c(keepI,keepT)
+  obsI<- mean(keepI)
+  obsT<- mean(keepT)
+  diff.obs <- abs(obsI - obsT)
+  #diff.obs <- obsI - obsT
+  
+  .gpe <- rep(c("int","tel"),c(length(keepI),length(keepT)))
+  
+  perm.test<- function(keepIT=keepIT,.gpe=.gpe){
+    mixgpe <- sample(.gpe,replace = FALSE)
+    int <- keepIT[mixgpe=="int"]
+    tel <- keepIT[mixgpe=="tel"]
+    mi<-mean(int)
+    mt<-mean(tel)
+    diff<-abs(mi-mt)
+    #diff<-mi-mt
+    return(diff)
+  }
+  
+  many.samp<- replicate (N, perm.test(keepIT,.gpe))
+  
+  #p.val <- 1-(length(many.samp[many.samp<= diff.obs])) / (length(many.samp))
+  p.val <-length(many.samp[many.samp>= diff.obs]) / length(many.samp)
+  hist(many.samp,main=paste0("Difference mean theme",x))
+  abline(v=diff.obs,lwd=2,col=2)
+  
+  return(data.frame(ni=length(keepI),meani=obsI,nt=length(keepT),meant=obsT, diff_obs=diff.obs, p_value=p.val,nb_perm=N))
+}
+
+perm.moyenne.fin <- function (N){
+  xI<-d$res.score.final
+  xT<-f$res.score.final
+  
+  keepI <- na.omit(xI)
+  keepT <- na.omit(xT)
+  keepIT <- c(keepI,keepT)
+  obsI<- mean(keepI)
+  obsT<- mean(keepT)
+  diff.obs <- abs(obsI - obsT)
+  #diff.obs <- obsI - obsT
+  
+  .gpe <- rep(c("int","tel"),c(length(keepI),length(keepT)))
+  
+  perm.test<- function(keepIT=keepIT,.gpe=.gpe){
+    mixgpe <- sample(.gpe,replace = FALSE)
+    int <- keepIT[mixgpe=="int"]
+    tel <- keepIT[mixgpe=="tel"]
+    mi<-mean(int)
+    mt<-mean(tel)
+    diff<-abs(mi-mt)
+    #diff<-mi-mt
+    return(diff)
+  }
+  
+  many.samp<- replicate (N, perm.test(keepIT,.gpe))
+  
+  #p.val <- 1-(length(many.samp[many.samp<= diff.obs])) / (length(many.samp))
+  p.val <-length(many.samp[many.samp>= diff.obs]) / length(many.samp)
+  hist(many.samp,main=paste0("Difference mean global score"))
+  abline(v=diff.obs,lwd=2,col=2)
+  
+  return(data.frame(ni=length(keepI),meani=obsI,nt=length(keepT),meant=obsT, diff_obs=diff.obs, p_value=p.val,nb_perm=N))
+}
 
 
 
-############CALCUL DES ESTIMATEURS ET IC SANS BOOTSTRAP#############
+############CALCUL DES ESTIMATEURS ET IC SANS BOOTSTRAP : PAS UTILISE POUR LE MANUSCRIT #############
 
 #MOYENNE DES SCORES
 #.theme<- "res.theme2"
@@ -634,9 +766,6 @@ ESfun <- function (.theme) {  #.dat=.df
   #EStab<- as.vector(data.frame(ICmean= paste0(est=ESf$d," [",UCL=ESf$l.d,"-", UCU=ESf$u.d,"]")))
   return (EStab)
 }
-
-
-
 
 
 
