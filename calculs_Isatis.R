@@ -271,8 +271,8 @@ difMCi <- data.frame(c(difMCi,boot.diff.ci("res.score.final",R=20000))) ;names(d
 
 #COMPARAISON DES THEMES PAR TEST DE PERMUTATION
 #cf fonction dans script "test de permutation 2016 07 12.R"
-r16<- sapply(c(1:6),function(.x)perm.moyenne.th(x=.x,d,f,100000)$p_value)
-rf<-perm.moyenne.fin(100000)$p_value 
+r16<- sapply(c(1:6),function(.x)perm.moyenne.th(x=.x,d,f,1000000)$p_value)
+rf<-perm.moyenne.fin(1000000)$p_value 
 
 pval.tot <- data.frame(c(r16,rf)) ; pval.tot<- round(pval.tot,3) ; names(pval.tot) <- "p value"
 
@@ -284,6 +284,7 @@ write.table(print(tab.theme),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 #COEFFICIENT DE CROHNBACH
 
 #CALCUL DES CRONBACH et 95%CI
+
 set.seed(12345)
 crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000)))) #nb : les alpha sont calculés de la meme facon que dans le tableau du test de permutation ci dessous
 
