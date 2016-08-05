@@ -551,50 +551,6 @@ BootCi <- function (.theme, R) {
 }
 
 
-#ES par BOOTSTRAP AVEC LOG : ATTENTION PAS FAISABLE SANS VALEUR ABS  
-boot.stat.es.log <- function (data, indices) {  #data=.df
-  .dat <- data[indices,]
-  .dat <- na.omit (.dat)
-  .int <- .dat[.dat$group=="int", "score"]
-  .tel <- .dat[.dat$group=="tel", "score"]
-  .sd <- sd (c (.int, .tel))
-  #.dif <- abs(mean (.int)-mean (.tel))
-  .dif <- mean (.int)-mean (.tel)
-  .es1 <- log(.dif / .sd)
-  return (es=.es1)
-}
-
-ES.boot.log <-  function (.theme, R) {
-  .df <- data.frame (
-    score=c (d[, .theme], f[, .theme]),
-    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
-  )
-  .res <- boot (data=.df, statistic=boot.stat.es.log, R=R)
-  return (.res)
-}
-
-BootCi.log <- function (.theme, R) {
-  #  browser()
-  .bootres <<- ES.boot.log (.theme=.theme,R=R)
-  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
-  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
-  #.list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="bca"))
-  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
-  #.res <- data.frame (t (sapply (.list.ci, function (x) x[["bca"]][4:5]))) 
-  rownames (.res) <- names (.bootres$t0)
-  colnames (.res) <- c ("CI_L", "CI_U")
-  #.res$est <- apply (.bootres$t, 2, median)
-  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res
-  .res <- .res[, c (3, 1, 2)] #remet les colonnes dans l'ordre
-  .ans <- exp(.res)
-  .ans <- round (.ans,5) #fait un arrondi sur chaque valeur
-  .ans <-data.frame (Effect_size=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
-  .ans <- as.vector(.ans[1,])
-  return (.ans)
-}
-
-
-
 
 
 
