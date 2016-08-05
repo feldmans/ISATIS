@@ -21,434 +21,21 @@ library (boot)
 library(cocron)
 
 
+###### NB ######
+#Exemple de calcul d'estimateur par median 
+
+
+#############FONCTION POUR LE CALCUL DES SCORES###############
+
 decode_answer2 <- function(answer_ori)
   return(as.numeric (ifelse (substr (answer_ori, 2, 2)=="_", substr (answer_ori, 1, 1), substr (answer_ori, 1, 2))))
 #Fonction sans return : decode_answer2 <- function(answer_ori) as.numeric (ifelse (substr (answer_ori, 2, 2)=="_", substr (answer_ori, 1, 1), substr (answer_ori, 1, 2)))
 
+
+
+###############FONCTION POUR LA TABLE 1 SOCIODEMO#########################
+
 decode_answer_prof <- function(answer_prof) as.numeric (substr (answer_prof, 1, 1))
-
-calmean2IC.bootstrap<-function(thedata, nrep) {
-  mymeans<-rep(NA,nrep);
-  for (i in 1:nrep) {
-    mymeans[i]<-mean(sample(x=thedata,size= length(thedata), replace = TRUE));
-  }
-  meanIC<-quantile(mymeans, prob=c(0.5,0.025,0.975));
-  names(meanIC) <- c("mean", "2.5%", "97.5%")
-  return(meanIC)
-}
-
-#report n, mean, sd, median interquartile,
-scoreestim <- function (x,myname=NULL) {
-  x <- x[!is.na (x)]
-  n = length(x);
-  mymean<-calmean2IC.bootstrap(x,10000)
-  ab<-calsd.bootstrap(x,10000)
-  b<-median(x)
-  c<-quantile(x, probs = c(0.25, 0.75))
-  if (is.null (myname)) {
-    abc<-c(n,mymean,ab,b,c)
-    names(abc)<- c("n","mean","2.5%","97.5%","sd","median","q1","q3") 
-  } else {
-    v<-myname
-    abc<-c(v,n,mymean,ab,b,c)
-    names(abc)<- c("result","n","mean","2.5%","97.5%","sd","median","q1","q3")  
-  }
-  return(abc)
-}
-
-
-#Mean et IC sans bootstrap
-
-#.theme<- "res.theme2"
-NMCI<- function (.theme) {
-  .df<-data.frame(score=c (d[, .theme], f[, .theme]), group=c (rep ("int", nrow (d)), rep ("tel", nrow (f))))
-  .df<- na.omit(.df)
-  listN <- by(.df$score,.df$group,length)
-  res1<- data.frame(sapply(listN, function(x)x[[1]])) ;colnames (res1)="N"
-  n.1 <- res1[1,]
-  n.2 <- res1[2,]
-  
-  level = 95 ; alpha <- (100 - level)/100
-  ddl <- (n.1 + n.2) - 2
-  crit <- qt(alpha/2, ddl, lower.tail = FALSE) #t
-  # crit <- qnorm(0.975,0,1) #z
-  
-  res1$mymean<- by(.df$score,.df$group,mean)
-  res1$ICinf <- by(.df$score,.df$group, function(x)mean(x)-crit*sqrt(var(x)/length(x)))
-  res1$ICsup <-by(.df$score,.df$group, function(x)mean(x)+crit*sqrt(var(x)/length(x)))
-  
-  anc1 <- round(res1,2) 
-  anc1 <- data.frame(N= anc1$N, ICmean=paste0(anc1$mymean," [", anc1$ICinf,"–",anc1$ICsup,"]" ))
-  anc1 <- sapply  (c (internet=anc1[1, ], telephone=anc1[2, ]), as.vector )#c(int= , tel=)donne un titre, mais met en liste, 
-  
-  return(anc1)
-}
-
-#ES et IC sans bootstrap
-ESfun <- function (.theme) {  #.dat=.df
-  .df<-data.frame(score=c (d[, .theme], f[, .theme]), group=c (rep ("int", nrow (d)), rep ("tel", nrow (f))))
-  .df <- na.omit (.df)
-  .int <- .df[.df$group=="int", "score"]
-  .tel <- .df[.df$group=="tel", "score"]
-  .sd <- sd (c (.int, .tel))
-  .dif <- abs(mean (.int)-mean (.tel))
-  .es1 <- .dif / .sd
-  
-  n.1 <-length(.int) ;  n.2 <- length (.tel)
-  level = 95 ; alpha <- (100 - level)/100
-  ddl <- (n.1 + n.2) - 2
-  crit <- qt(alpha/2, ddl, lower.tail = FALSE) #t
-  
-  var.d <- (n.1 + n.2)/(n.1 * n.2) + (.es1^2)/(2 * (n.1 + n.2))
-  l.d <- .es1 - crit * sqrt(var.d)
-  u.d <- .es1 + crit * sqrt(var.d)
-  ESf <- round(data.frame(d=.es1,l.d,u.d),3)
-  #ESf <- data.frame(des(d=.es1,n.1=length(.int),n.2=length(.tel)))
-  EStab<- data.frame(ICmean= paste0(est=ESf$d," [",UCL=ESf$l.d,"-", UCU=ESf$u.d,"]"))
-  EStab <- as.vector(EStab[1,])
-  #EStab<- as.vector(data.frame(ICmean= paste0(est=ESf$d," [",UCL=ESf$l.d,"-", UCU=ESf$u.d,"]")))
-  return (EStab)
-}
-
-#diff mean et IC sans bootstrap
-diffmfun<- function (.theme){
-  .df<-data.frame(score=c (d[, .theme], f[, .theme]), group=c (rep ("int", nrow (d)), rep ("tel", nrow (f))))
-  .df <- na.omit (.df)
-  .int <- .df[.df$group=="int", "score"]
-  .tel <- .df[.df$group=="tel", "score"]
-  .dm <- mean(.tel)- mean(.int)
-  .var1<- var(.int) ; .var2<- var(.tel)
-  n.1 <-length(.int) ;  n.2 <- length (.tel)
-  vardm <-(.var1/n.1)+(.var2/n.2)
-  
-  level = 95 ; alpha <- (100 - level)/100
-  ddl <- (n.1 + n.2) - 2
-  crit <- qt(alpha/2, ddl, lower.tail = FALSE) #t
-  #crit <- qnorm(0.975,0,1) #z
-  
-  l.d <- .dm - crit * sqrt(vardm)
-  u.d <- .dm + crit * sqrt(vardm)
-  
-  dmf <- round(data.frame(.dm,l.d,u.d),2)
-  dmtab<- data.frame(ICmean= paste0(est=dmf$.dm," [",UCL=dmf$l.d,"-", UCU=dmf$u.d,"]"))
-  dmtab <- as.vector(dmtab[1,])
-  #EStab<- as.vector(data.frame(ICmean= paste0(est=ESf$d," [",UCL=ESf$l.d,"-", UCU=ESf$u.d,"]")))
-  return (dmtab)
-} 
-
-#MOYENNE IC par BOOTSTRAP
-
-#1. Je cree mon tableau/vecteur de data que j'appelle .df. Ce sera ensuite dans fonction boot
-#2. Je peux modifier mon tableau/vecteur et appliquer une fonction a ce tableau/vecteur. ce sera fonction stat
-#3. Je cree une fonction ci qui integre la fonction avec boot.
-
-#Je cree la fonction stat pour avoir la moyenne
-#data va prendre la valeur de .df, comme defini dans la fonction suivante
-fun.mean <- function(data,indices){
-  .dat <- data[indices,]
-  .dat <- na.omit (.dat)
-  #.int <- .dat[.dat$group=="int", "score"]
-  #.tel <- .dat[.dat$group=="tel", "score"]
-  mymean<-by(.dat$score,.dat$group,mean)
-  return(mymean)
-}
-
-#Je cree la fonction boot. 
-#le tableau .df defini l'argument data de la fonction fun mean. 
-#boot repete la fonction fun.mean R fois : il genere un nouveau .df[indices,] et fait la moyenne. 
-boot.theme <- function (.theme,R){
-  .df <- data.frame (
-    score=c (d[, .theme], f[, .theme]),
-    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
-  )
-  .res<- boot(data=.df,statistic=fun.mean,R=R)
-  return(.res)
-}
-
-
-#Je cree une fonction BootCi qui reintegre resultat de boot.theme et ajoute les IC et met en forme
-BootMCi <- function (.theme, R) {
-  #  browser()
-  .bootres <- boot.theme (.theme=.theme, R=R)
-  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
-  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
-  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
-  rownames (.res) <- names (.bootres$t0) #appelle les lignes int et tel mais ca sera perdu ensuite
-  colnames (.res) <- c ("CI_L", "CI_U")
-  #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
-  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
-  .res$n<-c(sum(!is.na(d[,.theme])),sum(!is.na(f[,.theme]))) #true(non manquant) vaut 1, donc nb de non NA
-  .res <- .res[, c (4,3, 1, 2)] #remet les colonnes dans l'ordre
-  .ans <- round (.res, 2) #fait un arrondi sur chaque valeur
-  .ans <- data.frame (N=.res$n, meanCI=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
-  .ans <- sapply  (c (internet=.ans[1, ], telephone=.ans[2, ]), as.vector )#c(int= , tel=)donne un titre, mais met en liste, 
-  #sapply(as.vector) realigne en chaine de caracteres
-  return (.ans)
-}
-
-#DIFFERENCE DE MOYENNE
-boot.stat.diffM<-function(data,indices){
-  .dat<-data[indices,]  
-  .dat <- na.omit (.dat)
-  .int <- .dat[.dat$group=="int", "score"]
-  .tel <- .dat[.dat$group=="tel", "score"]
-  .dif <- mean (.tel)-mean (.int)
-  return(.dif)
-}
-
-boot.diff <- function (.theme,R){
-  .df <- data.frame (
-    score=c (d[, .theme], f[, .theme]),
-    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
-  )
-  .res <- boot(data=.df,statistic=boot.stat.diffM, R=R)
-  return(.res)
-}
-
-boot.diff.ci<- function (.theme,R){
-  .bootres <- boot.diff (.theme=.theme,R=R)
-  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
-  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
-  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
-  rownames (.res) <- names (.bootres$t0)
-  colnames (.res) <- c ("CI_L", "CI_U")
-  #.res$est <- apply (.bootres$t, 2, median)
-  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res
-  .res <- .res[, c (3, 1, 2)] #remet les colonnes dans l'ordre
-  .ans <- round (.res,2) #fait un arrondi sur chaque valeur
-  .ans <-data.frame (diff_tel_min_int=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
-  .ans <- as.vector(.ans[1,])
-  return (.ans)
-}
-
-#FONCTION EFFECT SIZE
-
-#0. choisir un theme pour faire les essais : .theme<- "res.score.final"
-#1. creer .df = tableau sur lequel on va travailler, qui comprend .theme
-#2. faire .dat<-.df et creer une fonction de stat qui travaille sur .dat, 
-#organiser le tout en fonction stat et fonction boot : rajouter .dat <-data[indices,] au debut de fonction stat et boot() en fin de fonction boot
-#Resume des variables pour test de bootci: .theme<- "res.score.final" R<-100 puis faire tourner premiere ligne de bootci
-boot.stat.es <- function (data, indices) {  #data=.df
-  .dat <- data[indices,]
-  .dat <- na.omit (.dat)
-  .int <- .dat[.dat$group=="int", "score"]
-  .tel <- .dat[.dat$group=="tel", "score"]
-  .sd <- sd (c (.int, .tel))
-  #.dif <- abs(mean (.int)-mean (.tel))
-  .dif <- mean (.int)-mean (.tel)
-  .es1 <- .dif / .sd
-  return (es=.es1)
-}
-
-ES.boot <-  function (.theme, R) {
-  .df <- data.frame (
-    score=c (d[, .theme], f[, .theme]),
-    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
-  )
-  .res <- boot (data=.df, statistic=boot.stat.es, R=R)
-  return (.res)
-}
-
-
-# boot.res <- ES.boot ("res.theme1",R=100)
-# .ci <- lapply (1:4, function (.i) boot.ci (boot.res, type="perc", index=.i))
-# .ci <- boot.ci (boot.res, type="perc", index=1)
-# names (.ci) <- c ("sd", "es", "sd2", "es2")
-
-BootCi <- function (.theme, R) {
-  #  browser()
-  .bootres <<- ES.boot (.theme=.theme,R=R)
-  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
-  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
-  #.list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="bca"))
-  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
-  #.res <- data.frame (t (sapply (.list.ci, function (x) x[["bca"]][4:5]))) 
-  rownames (.res) <- names (.bootres$t0)
-  colnames (.res) <- c ("CI_L", "CI_U")
-  #.res$est <- apply (.bootres$t, 2, median)
-  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res
-  .res <- .res[, c (3, 1, 2)] #remet les colonnes dans l'ordre
-  .ans <- round (.res,4) #fait un arrondi sur chaque valeur
-  .ans <-data.frame (Effect_size=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
-  .ans <- as.vector(.ans[1,])
-  return (.ans)
-}
-
-
-#ES par BOOTSTRAP AVEC LOG : ATTENTION PAS FAISABLE SANS VALEUR ABS
-boot.stat.es.log <- function (data, indices) {  #data=.df
-  .dat <- data[indices,]
-  .dat <- na.omit (.dat)
-  .int <- .dat[.dat$group=="int", "score"]
-  .tel <- .dat[.dat$group=="tel", "score"]
-  .sd <- sd (c (.int, .tel))
-  #.dif <- abs(mean (.int)-mean (.tel))
-  .dif <- mean (.int)-mean (.tel)
-  .es1 <- log(.dif / .sd)
-  return (es=.es1)
-}
-
-ES.boot.log <-  function (.theme, R) {
-  .df <- data.frame (
-    score=c (d[, .theme], f[, .theme]),
-    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
-  )
-  .res <- boot (data=.df, statistic=boot.stat.es.log, R=R)
-  return (.res)
-}
-
-BootCi.log <- function (.theme, R) {
-  #  browser()
-  .bootres <<- ES.boot.log (.theme=.theme,R=R)
-  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
-  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
-  #.list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="bca"))
-  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
-  #.res <- data.frame (t (sapply (.list.ci, function (x) x[["bca"]][4:5]))) 
-  rownames (.res) <- names (.bootres$t0)
-  colnames (.res) <- c ("CI_L", "CI_U")
-  #.res$est <- apply (.bootres$t, 2, median)
-  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res
-  .res <- .res[, c (3, 1, 2)] #remet les colonnes dans l'ordre
-  .ans <- exp(.res)
-  .ans <- round (.ans,5) #fait un arrondi sur chaque valeur
-  .ans <-data.frame (Effect_size=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
-  .ans <- as.vector(.ans[1,])
-  return (.ans)
-}
-
-
-# typeof(.list.ci)
-# length(.list.ci)
-# names(.list.ci)
-# length(.list.ci[[1]])
-# names(.list.ci[[1]])
-# .list.ci[[1]]$percent
-# .list.ci[[1]][["percent"]]
-# .list.ci[[1]][["percent"]][4:5]
-
-
-#ES AVEC LA FONCTION bootES
-
-# fun.es <- function(.theme,R) {
-#   .df <- data.frame (
-#     score=c (d[, .theme], f[, .theme]),
-#     group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
-#     )
-#   .df<- na.omit(.df)
-#   .res <- bootES(data=.df,data.col="score",group.col="group",contrast=c("int","tel"),effect.type="cohens.d.sigma")
-#   return(.res)
-# }
-# fun.es("res.theme1",100)
-
-
-
-#SD par bootsrap
-calsd.bootstrap <- function(data1,nrep){
-  boot <- lapply(1:nrep,function(x)sample(data1, size= length(data1),replace=T)) 
-  mysd <- sapply(boot,sd,na.rm=TRUE)
-  medsd <- quantile(mysd,prob=0.5)
-  return(medsd)
-}
-
-
-cronbach2 <- function (v1, duree)
-{
-  nv1 <- ncol(v1)
-  keep <- rowSums (!is.na (v1)) >= ifelse (nv1<=4, 2, 3) & duree >= 2
-  v1 <- v1[keep, ]
-  pv1 <- nrow(v1)
-  alpha <- (nv1/(nv1 - 1)) * (1 - sum(apply(v1, 2, var, na.rm=T))/var(apply(v1, 1, sum, na.rm=T)))
-  resu <- list(sample.size = pv1, number.of.items = nv1, alpha = alpha)
-  resu
-}
-
-#FREQUENCE SOCIO SELON SERVICE
-#internet et telephone separe
-fun.socio3 <- function (service, data){
-  soc1<-summary(data[data$service.recode==service,"Age"])
-  soc2<-table(data[data$service.recode==service,"Sexe"])
-  soc3<-table(data[data$service.recode==service,"socio3"])
-  soc4<-table(data[data$service.recode==service,"socio4"])
-  soc5<-table(data[data$service.recode==service,"socio5"])
-  soc8<-table(data[data$service.recode==service,"socio8"])
-  res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6], "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]")
-  res2 <- paste0 ("\n\nSexe=M: ", soc2[2], " (", round (soc2[2]/sum (soc2)*100, 1), "%)")
-  res3 <- paste0(c ("jusqu'au 1er cycle secondaire : ", " jusqu'au second cycle secondaire : ", " jusqu'au superieur court ou post secondaire : ", " enseignement superieur : "), soc3," (", round(prop.table(soc3),3)*100,"%)")
-  res4 <- paste0(c("seul : "," en couple : "),soc4," (",round(prop.table(soc4),3)*100,"%)")
-  res5 <- paste0(c("emploi ou etude : "," sans activite : "),soc5," (",round(prop.table(soc5),3)*100,"%)")
-  res8 <- paste0(c("precaire : "," secu : "," secu et mutuelle : "),soc8," (",round(prop.table(soc8),3)*100,"%)")
-  cat (service, ":\n\n", res1, res2, "\n\nEducation :\n", paste (res3, collapse="\n"),"\n\nStatut marital :\n",paste (res4, collapse="\n"),"\n\nActivité :\n",paste(res5,collapse="\n"),"\n\nRegime :\n",paste(res8,collapse="\n"), "\n\n********************\n\n")
-  return("OK")
-}
-
-#internet et telephone dans meme feuille
-#data1=telephone, data2 = internet
-fun.socio4 <- function (service, data1, data2){
-  soc1<-summary(data1[data1$service.recode==service,"Age"])
-  soc2<-table(data1[data1$service.recode==service,"Sexe"])
-  soc3<-table(data1[data1$service.recode==service,"socio3"])
-  soc4<-table(data1[data1$service.recode==service,"socio4"])
-  soc5<-table(data1[data1$service.recode==service,"socio5"])
-  soc8<-table(data1[data1$service.recode==service,"socio8"])
-  soc1b<-summary(data2[data2$service.recode==service,"Age"])
-  soc2b<-table(data2[data2$service.recode==service,"Sexe"])
-  soc3b<-table(data2[data2$service.recode==service,"socio3"])
-  soc4b<-table(data2[data2$service.recode==service,"socio4"])
-  soc5b<-table(data2[data2$service.recode==service,"socio5"])
-  soc8b<-table(data2[data2$service.recode==service,"socio8"])
-  res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6]," / ", as.numeric(soc1b)[1],",",as.numeric (soc1b)[6], 
-                  "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]", 
-                  " / ",as.numeric (soc1b)[3], " [", as.numeric (soc1b)[2], ", ", as.numeric (soc1b)[5], "]")
-  res2 <- paste0 ("\n\nSexe=M: ", soc2[2], " (", round (soc2[2]/sum (soc2)*100, 1), "%)", " / ",soc2b[2], " (", round (soc2b[2]/sum (soc2b)*100, 1), "%)" )
-  res3 <- paste0(c ("jusqu'au 1er cycle secondaire : ", " jusqu'au second cycle secondaire : ", " jusqu'au superieur court ou post secondaire : ", " enseignement superieur : "),
-                 soc3," (", round(prop.table(soc3),3)*100,"%)"," / ",soc3b," (", round(prop.table(soc3b),3)*100,"%)")
-  res4 <- paste0(c("seul : "," en couple : "),soc4,"(",round(prop.table(soc4),3)*100,"%)"," / ",soc4b,"(",round(prop.table(soc4b),3)*100,"%)")
-  res5 <- paste0(c("emploi ou etude : "," sans activite : "),soc5," (",round(prop.table(soc5),3)*100,"%)"," / ",soc5b," (",round(prop.table(soc5b),3)*100,"%)")
-  res8 <- paste0(c("precaire : "," secu : "," secu et mutuelle : "),soc8," (",round(prop.table(soc8),3)*100,"%)"," / ",soc8b," (",round(prop.table(soc8b),3)*100,"%)")
-  cat (service, ": telephone/internet\n\n", res1, res2, "\n\nEducation :\n", paste (res3, collapse="\n"),"\n\nStatut marital :\n",paste (res4, collapse="\n"),"\n\nActivité :\n",paste(res5,collapse="\n"),"\n\nRegime :\n",paste(res8,collapse="\n"), "\n\n********************\n\n")
-  return("OK")
-}
-#service<-"CHIRURGIE DIGESTIVE"
-#data1<-d
-#data2<-f
-
-fun.socio5 <- function (service, data1, data2){
-  soc1<-summary(data1[data1$service.recode==service,"Age"])
-  soc2<-table(data1[data1$service.recode==service,"Sexe"])
-  soc3<-table(data1[data1$service.recode==service,"socio3"])
-  soc4<-table(data1[data1$service.recode==service,"socio4"])
-  soc5<-table(data1[data1$service.recode==service,"socio5"])
-  soc8<-table(data1[data1$service.recode==service,"socio8"])
-  soc1b<-summary(data2[data2$service.recode==service,"Age"])
-  soc2b<-table(data2[data2$service.recode==service,"Sexe"])
-  soc3b<-table(data2[data2$service.recode==service,"socio3"])
-  soc4b<-table(data2[data2$service.recode==service,"socio4"])
-  soc5b<-table(data2[data2$service.recode==service,"socio5"])
-  soc8b<-table(data2[data2$service.recode==service,"socio8"])
-  res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6]," / ", as.numeric(soc1b)[1],",",as.numeric (soc1b)[6], 
-                  "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]", 
-                  " / ",as.numeric (soc1b)[3], " [", as.numeric (soc1b)[2], ", ", as.numeric (soc1b)[5], "]")
-  res2 <- paste0 ("\n\nSexe=M: ", soc2[2], " (", round (soc2[2]/sum (soc2)*100, 1), "%)", " / ",soc2b[2], " (", round (soc2b[2]/sum (soc2b)*100, 1), "%)" )
-  res3 <- paste0(c ("jusqu'au 1er cycle secondaire : ", " jusqu'au second cycle secondaire : ", " jusqu'au superieur court ou post secondaire : ", " enseignement superieur : "),
-                 soc3," (", round(prop.table(soc3),3)*100,"%)"," / ",soc3b," (", round(prop.table(soc3b),3)*100,"%)")
-  res4 <- paste0(c("seul : "," en couple : "),soc4,"(",round(prop.table(soc4),3)*100,"%)"," / ",soc4b,"(",round(prop.table(soc4b),3)*100,"%)")
-  res5 <- paste0(c("emploi ou etude : "," sans activite : "),soc5," (",round(prop.table(soc5),3)*100,"%)"," / ",soc5b," (",round(prop.table(soc5b),3)*100,"%)")
-  res8 <- paste0(c("precaire : "," secu : "," secu et mutuelle : "),soc8," (",round(prop.table(soc8),3)*100,"%)"," / ",soc8b," (",round(prop.table(soc8b),3)*100,"%)")
-  cat (res1, res2, "\n\nEducation :\n", paste (res3, collapse="\n"),"\n\nStatut marital :\n",paste (res4, collapse="\n"),"\n\nActivité :\n",paste(res5,collapse="\n"),"\n\nRegime :\n",paste(res8,collapse="\n"), "\n\n********************\n\n")
-  return("OK")
-}
-
-#RESULTAT THEME SELON SERVICE
-fun.score <- function(service,data) {
-  #  browser()
-  theme <- data.frame (t (sapply (1:6, function (x) scoreestim (data[data$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
-  final <- data.frame(t(scoreestim(data[data$service.recode==service,"res.score.final"],"score final")))
-  output <- rbind(theme,final)
-  #  write.table(print(output),file="clipboard",sep="\t",dec=",",row.names=FALSE) 
-  output
-}
-
 
 DesN2 <- function (duree) {
   #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(n=n())
@@ -652,6 +239,75 @@ DesAssurance <- function(duree) {
 
 #######CRONBACH#########
 
+#cronbach2 utilisé avant que je cré la fonction BootCronCi, qui élimine les lignes pour lesquelles restheme est manquant
+# c'est à dire si nv1<= 2 si 4Q ou moins ou si nv1<=3 si plus de 4Q:
+    # cronbach2 <- function (v1, duree)
+    # {
+    #   nv1 <- ncol(v1)
+    #   keep <- rowSums (!is.na (v1)) >= ifelse (nv1<=4, 2, 3) & duree >= 2
+    #   v1 <- v1[keep, ]
+    #   pv1 <- nrow(v1)
+    #   alpha <- (nv1/(nv1 - 1)) * (1 - sum(apply(v1, 2, var, na.rm=T))/var(apply(v1, 1, sum, na.rm=T)))
+    #   resu <- list(sample.size = pv1, number.of.items = nv1, alpha = alpha)
+    #   resu
+    # }
+
+#calcul CRONBACH et intervalle de confiance
+cronbach.no.omit<- function(v1){
+  nv1<-ncol(v1)
+  pv1 <- nrow(v1)
+  alpha <- (nv1/(nv1 - 1)) * (1 - sum(apply(v1, 2, var, na.rm=T))/var(apply(v1, 1, sum, na.rm=T)))
+  return(alpha)
+}
+
+cronbach3.boot<- function(data,indices){
+  .dat<- data[indices,]
+  #.int<- .dat[.dat$group=="int",][-1]
+  #.int<- cronbach3(.int)
+  #.tel<- .dat[.dat$group=="tel",][-1]
+  #.tel<- cronbach3(.tel)
+  cron<-by(.dat[-1],.dat$group,cronbach.no.omit)
+  #return(list(.int,.tel))
+  return(cron)
+}
+
+bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
+  
+  xI<-get(paste0("vI",x))
+  xT<-get(paste0("vT",x))
+  #if(is.numeric(as.numeric(x))){
+  if(!is.na(as.numeric(x))){
+  keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
+  keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
+  }
+  else {
+    keepI <- na.omit(xI)
+    keepT <- na.omit(xT)
+  }
+  .df <- data.frame(
+              group=rep(c("int","tel"),c(nrow(keepI),nrow(keepT))),
+              items=rbind(keepI,keepT)
+  )
+  .res<-boot(data=.df,statistic = cronbach3.boot ,R=R)
+}
+BootCronCi <- function(x,R)  {
+  .bootres <- bootcron (x=x, R=R)
+  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  rownames (.res) <- names (.bootres$t0)
+  colnames (.res) <- c ("CI_L", "CI_U")
+  .res$est <- as.numeric (.bootres$t0)
+  if(!is.na(as.numeric(x))).res$n<-c(sum(!is.na(d[,paste0("res.theme",x)])),sum(!is.na(f[,paste0("res.theme",x)])))
+  else .res$n <- c(sum(!is.na(d$res.score.final)),sum(!is.na(f$res.score.final)))
+  .res <- .res[, c (4,3, 1, 2)]
+  .ans <- round (.res, 2) #fait un arrondi sur chaque valeur
+  .ans <- data.frame (N=.res$n, alpha_CI=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
+  .ans <- sapply  (c (internet=.ans[1, ], telephone=.ans[2, ]), as.vector )#c(int= , tel=)donne un titre, mais met en liste, 
+  #sapply(as.vector) realigne en chaine de caracteres
+  return (.ans)
+}
+
 #pvalue : test de permutation:
 perm.cronbach.theme<- function (x,N){
   # x<-1
@@ -731,65 +387,408 @@ perm.cronbach.fin<- function (N){
   
 }
 
-#CI CRONBACH theme
-cronbach.no.omit<- function(v1){
-  nv1<-ncol(v1)
-  pv1 <- nrow(v1)
-  alpha <- (nv1/(nv1 - 1)) * (1 - sum(apply(v1, 2, var, na.rm=T))/var(apply(v1, 1, sum, na.rm=T)))
-  return(alpha)
+
+
+############CALCUL DES ESTIMATEURS ET IC PAR BOOTSTRAP#############
+
+#MOYENNE DES SCORES
+
+#1. Je cree mon tableau/vecteur de data que j'appelle .df. Ce sera ensuite dans fonction boot
+#2. Je peux modifier mon tableau/vecteur et appliquer une fonction a ce tableau/vecteur. ce sera fonction stat
+#3. Je cree une fonction ci qui integre la fonction avec boot.
+
+#Je cree la fonction stat pour avoir la moyenne
+#data va prendre la valeur de .df, comme defini dans la fonction suivante
+fun.mean <- function(data,indices){
+  .dat <- data[indices,]
+  .dat <- na.omit (.dat)
+  #.int <- .dat[.dat$group=="int", "score"]
+  #.tel <- .dat[.dat$group=="tel", "score"]
+  mymean<-by(.dat$score,.dat$group,mean)
+  return(mymean)
 }
 
-cronbach3.boot<- function(data,indices){
-  .dat<- data[indices,]
-  #.int<- .dat[.dat$group=="int",][-1]
-  #.int<- cronbach3(.int)
-  #.tel<- .dat[.dat$group=="tel",][-1]
-  #.tel<- cronbach3(.tel)
-  cron<-by(.dat[-1],.dat$group,cronbach.no.omit)
-  #return(list(.int,.tel))
-  return(cron)
-}
-
-
-bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
-  
-  xI<-get(paste0("vI",x))
-  xT<-get(paste0("vT",x))
-  #if(is.numeric(as.numeric(x))){
-  if(!is.na(as.numeric(x))){
-  keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
-  keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
-  }
-  else {
-    keepI <- na.omit(xI)
-    keepT <- na.omit(xT)
-  }
-  .df <- data.frame(
-              group=rep(c("int","tel"),c(nrow(keepI),nrow(keepT))),
-              items=rbind(keepI,keepT)
+#Je cree la fonction boot. 
+#le tableau .df defini l'argument data de la fonction fun mean. 
+#boot repete la fonction fun.mean R fois : il genere un nouveau .df[indices,] et fait la moyenne. 
+boot.theme <- function (.theme,R){
+  .df <- data.frame (
+    score=c (d[, .theme], f[, .theme]),
+    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
   )
-  .res<-boot(data=.df,statistic = cronbach3.boot ,R=R)
+  .res<- boot(data=.df,statistic=fun.mean,R=R)
+  return(.res)
 }
-BootCronCi <- function(x,R)  {
-  .bootres <- bootcron (x=x, R=R)
+
+
+#Je cree une fonction BootCi qui reintegre resultat de boot.theme et ajoute les IC et met en forme
+BootMCi <- function (.theme, R) {
+  #  browser()
+  .bootres <- boot.theme (.theme=.theme, R=R)
   .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
   .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
   .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
-  rownames (.res) <- names (.bootres$t0)
+  rownames (.res) <- names (.bootres$t0) #appelle les lignes int et tel mais ca sera perdu ensuite
   colnames (.res) <- c ("CI_L", "CI_U")
-  .res$est <- as.numeric (.bootres$t0)
-  if(!is.na(as.numeric(x))).res$n<-c(sum(!is.na(d[,paste0("res.theme",x)])),sum(!is.na(f[,paste0("res.theme",x)])))
-  else .res$n <- c(sum(!is.na(d$res.score.final)),sum(!is.na(f$res.score.final)))
-  .res <- .res[, c (4,3, 1, 2)]
+  #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
+  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
+  .res$n<-c(sum(!is.na(d[,.theme])),sum(!is.na(f[,.theme]))) #true(non manquant) vaut 1, donc nb de non NA
+  .res <- .res[, c (4,3, 1, 2)] #remet les colonnes dans l'ordre
   .ans <- round (.res, 2) #fait un arrondi sur chaque valeur
-  .ans <- data.frame (N=.res$n, alpha_CI=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
+  .ans <- data.frame (N=.res$n, meanCI=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
   .ans <- sapply  (c (internet=.ans[1, ], telephone=.ans[2, ]), as.vector )#c(int= , tel=)donne un titre, mais met en liste, 
   #sapply(as.vector) realigne en chaine de caracteres
   return (.ans)
 }
 
-BootCronCi("tot",100)
+#DIFFERENCE DES MOYENNES
+boot.stat.diffM<-function(data,indices){
+  .dat<-data[indices,]  
+  .dat <- na.omit (.dat)
+  .int <- .dat[.dat$group=="int", "score"]
+  .tel <- .dat[.dat$group=="tel", "score"]
+  .dif <- mean (.tel)-mean (.int)
+  return(.dif)
+}
+
+boot.diff <- function (.theme,R){
+  .df <- data.frame (
+    score=c (d[, .theme], f[, .theme]),
+    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
+  )
+  .res <- boot(data=.df,statistic=boot.stat.diffM, R=R)
+  return(.res)
+}
+
+boot.diff.ci<- function (.theme,R){
+  .bootres <- boot.diff (.theme=.theme,R=R)
+  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  rownames (.res) <- names (.bootres$t0)
+  colnames (.res) <- c ("CI_L", "CI_U")
+  #.res$est <- apply (.bootres$t, 2, median)
+  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res
+  .res <- .res[, c (3, 1, 2)] #remet les colonnes dans l'ordre
+  .ans <- round (.res,2) #fait un arrondi sur chaque valeur
+  .ans <-data.frame (diff_tel_min_int=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
+  .ans <- as.vector(.ans[1,])
+  return (.ans)
+}
+
+#EFFECT SIZE DES SCORES
+
+#0. choisir un theme pour faire les essais : .theme<- "res.score.final"
+#1. creer .df = tableau sur lequel on va travailler, qui comprend .theme
+#2. faire .dat<-.df et creer une fonction de stat qui travaille sur .dat, 
+#organiser le tout en fonction stat et fonction boot : rajouter .dat <-data[indices,] au debut de fonction stat et boot() en fin de fonction boot
+#Resume des variables pour test de bootci: .theme<- "res.score.final" R<-100 puis faire tourner premiere ligne de bootci
+boot.stat.es <- function (data, indices) {  #data=.df
+  .dat <- data[indices,]
+  .dat <- na.omit (.dat)
+  .int <- .dat[.dat$group=="int", "score"]
+  .tel <- .dat[.dat$group=="tel", "score"]
+  .sd <- sd (c (.int, .tel))
+  #.dif <- abs(mean (.int)-mean (.tel))
+  .dif <- mean (.int)-mean (.tel)
+  .es1 <- .dif / .sd
+  return (es=.es1)
+}
+
+ES.boot <-  function (.theme, R) {
+  .df <- data.frame (
+    score=c (d[, .theme], f[, .theme]),
+    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
+  )
+  .res <- boot (data=.df, statistic=boot.stat.es, R=R)
+  return (.res)
+}
+
+
+BootCi <- function (.theme, R) {
+  #  browser()
+  .bootres <<- ES.boot (.theme=.theme,R=R)
+  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  #.list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="bca"))
+  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  #.res <- data.frame (t (sapply (.list.ci, function (x) x[["bca"]][4:5]))) 
+  rownames (.res) <- names (.bootres$t0)
+  colnames (.res) <- c ("CI_L", "CI_U")
+  #.res$est <- apply (.bootres$t, 2, median)
+  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res
+  .res <- .res[, c (3, 1, 2)] #remet les colonnes dans l'ordre
+  .ans <- round (.res,4) #fait un arrondi sur chaque valeur
+  .ans <-data.frame (Effect_size=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
+  .ans <- as.vector(.ans[1,])
+  return (.ans)
+}
+
+
+#ES par BOOTSTRAP AVEC LOG : ATTENTION PAS FAISABLE SANS VALEUR ABS
+boot.stat.es.log <- function (data, indices) {  #data=.df
+  .dat <- data[indices,]
+  .dat <- na.omit (.dat)
+  .int <- .dat[.dat$group=="int", "score"]
+  .tel <- .dat[.dat$group=="tel", "score"]
+  .sd <- sd (c (.int, .tel))
+  #.dif <- abs(mean (.int)-mean (.tel))
+  .dif <- mean (.int)-mean (.tel)
+  .es1 <- log(.dif / .sd)
+  return (es=.es1)
+}
+
+ES.boot.log <-  function (.theme, R) {
+  .df <- data.frame (
+    score=c (d[, .theme], f[, .theme]),
+    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
+  )
+  .res <- boot (data=.df, statistic=boot.stat.es.log, R=R)
+  return (.res)
+}
+
+BootCi.log <- function (.theme, R) {
+  #  browser()
+  .bootres <<- ES.boot.log (.theme=.theme,R=R)
+  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  #.list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="bca"))
+  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  #.res <- data.frame (t (sapply (.list.ci, function (x) x[["bca"]][4:5]))) 
+  rownames (.res) <- names (.bootres$t0)
+  colnames (.res) <- c ("CI_L", "CI_U")
+  #.res$est <- apply (.bootres$t, 2, median)
+  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res
+  .res <- .res[, c (3, 1, 2)] #remet les colonnes dans l'ordre
+  .ans <- exp(.res)
+  .ans <- round (.ans,5) #fait un arrondi sur chaque valeur
+  .ans <-data.frame (Effect_size=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
+  .ans <- as.vector(.ans[1,])
+  return (.ans)
+}
+
+
+
+#ES AVEC LA FONCTION bootES
+
+# fun.es <- function(.theme,R) {
+#   .df <- data.frame (
+#     score=c (d[, .theme], f[, .theme]),
+#     group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
+#     )
+#   .df<- na.omit(.df)
+#   .res <- bootES(data=.df,data.col="score",group.col="group",contrast=c("int","tel"),effect.type="cohens.d.sigma")
+#   return(.res)
+# }
+# fun.es("res.theme1",100)
+
+
+
+############CALCUL DES ESTIMATEURS ET IC SANS BOOTSTRAP#############
+
+#MOYENNE DES SCORES
+#.theme<- "res.theme2"
+NMCI<- function (.theme) {
+  .df<-data.frame(score=c (d[, .theme], f[, .theme]), group=c (rep ("int", nrow (d)), rep ("tel", nrow (f))))
+  .df<- na.omit(.df)
+  listN <- by(.df$score,.df$group,length)
+  res1<- data.frame(sapply(listN, function(x)x[[1]])) ;colnames (res1)="N"
+  n.1 <- res1[1,]
+  n.2 <- res1[2,]
   
+  level = 95 ; alpha <- (100 - level)/100
+  ddl <- (n.1 + n.2) - 2
+  crit <- qt(alpha/2, ddl, lower.tail = FALSE) #t
+  # crit <- qnorm(0.975,0,1) #z
+  
+  res1$mymean<- by(.df$score,.df$group,mean)
+  res1$ICinf <- by(.df$score,.df$group, function(x)mean(x)-crit*sqrt(var(x)/length(x)))
+  res1$ICsup <-by(.df$score,.df$group, function(x)mean(x)+crit*sqrt(var(x)/length(x)))
+  
+  anc1 <- round(res1,2) 
+  anc1 <- data.frame(N= anc1$N, ICmean=paste0(anc1$mymean," [", anc1$ICinf,"–",anc1$ICsup,"]" ))
+  anc1 <- sapply  (c (internet=anc1[1, ], telephone=anc1[2, ]), as.vector )#c(int= , tel=)donne un titre, mais met en liste, 
+  
+  return(anc1)
+}
+
+#DIFFERENCES DES MOYENNES
+diffmfun<- function (.theme){
+  .df<-data.frame(score=c (d[, .theme], f[, .theme]), group=c (rep ("int", nrow (d)), rep ("tel", nrow (f))))
+  .df <- na.omit (.df)
+  .int <- .df[.df$group=="int", "score"]
+  .tel <- .df[.df$group=="tel", "score"]
+  .dm <- mean(.tel)- mean(.int)
+  .var1<- var(.int) ; .var2<- var(.tel)
+  n.1 <-length(.int) ;  n.2 <- length (.tel)
+  vardm <-(.var1/n.1)+(.var2/n.2)
+  
+  level = 95 ; alpha <- (100 - level)/100
+  ddl <- (n.1 + n.2) - 2
+  crit <- qt(alpha/2, ddl, lower.tail = FALSE) #t
+  #crit <- qnorm(0.975,0,1) #z
+  
+  l.d <- .dm - crit * sqrt(vardm)
+  u.d <- .dm + crit * sqrt(vardm)
+  
+  dmf <- round(data.frame(.dm,l.d,u.d),2)
+  dmtab<- data.frame(ICmean= paste0(est=dmf$.dm," [",UCL=dmf$l.d,"-", UCU=dmf$u.d,"]"))
+  dmtab <- as.vector(dmtab[1,])
+  #EStab<- as.vector(data.frame(ICmean= paste0(est=ESf$d," [",UCL=ESf$l.d,"-", UCU=ESf$u.d,"]")))
+  return (dmtab)
+} 
+
+#EFFECT SIZE DES SCORES
+ESfun <- function (.theme) {  #.dat=.df
+  .df<-data.frame(score=c (d[, .theme], f[, .theme]), group=c (rep ("int", nrow (d)), rep ("tel", nrow (f))))
+  .df <- na.omit (.df)
+  .int <- .df[.df$group=="int", "score"]
+  .tel <- .df[.df$group=="tel", "score"]
+  .sd <- sd (c (.int, .tel))
+  .dif <- abs(mean (.int)-mean (.tel))
+  .es1 <- .dif / .sd
+  
+  n.1 <-length(.int) ;  n.2 <- length (.tel)
+  level = 95 ; alpha <- (100 - level)/100
+  ddl <- (n.1 + n.2) - 2
+  crit <- qt(alpha/2, ddl, lower.tail = FALSE) #t
+  
+  var.d <- (n.1 + n.2)/(n.1 * n.2) + (.es1^2)/(2 * (n.1 + n.2))
+  l.d <- .es1 - crit * sqrt(var.d)
+  u.d <- .es1 + crit * sqrt(var.d)
+  ESf <- round(data.frame(d=.es1,l.d,u.d),3)
+  #ESf <- data.frame(des(d=.es1,n.1=length(.int),n.2=length(.tel)))
+  EStab<- data.frame(ICmean= paste0(est=ESf$d," [",UCL=ESf$l.d,"-", UCU=ESf$u.d,"]"))
+  EStab <- as.vector(EStab[1,])
+  #EStab<- as.vector(data.frame(ICmean= paste0(est=ESf$d," [",UCL=ESf$l.d,"-", UCU=ESf$u.d,"]")))
+  return (EStab)
+}
+
+
+
+
+
+
+
+
+###############FONCTIONS POUR LES RAPPORTS PAR SERVICE####################
+
+#calcul n, mean, sd, median interquartile
+
+calmean2IC.bootstrap<-function(thedata, nrep) {
+  mymeans<-rep(NA,nrep);
+  for (i in 1:nrep) {
+    mymeans[i]<-mean(sample(x=thedata,size= length(thedata), replace = TRUE));
+  }
+  meanIC<-quantile(mymeans, prob=c(0.5,0.025,0.975));
+  names(meanIC) <- c("mean", "2.5%", "97.5%")
+  return(meanIC)
+}
+
+scoreestim <- function (x,myname=NULL) {
+  x <- x[!is.na (x)]
+  n = length(x);
+  mymean<-calmean2IC.bootstrap(x,10000)
+  ab<-calsd.bootstrap(x,10000)
+  b<-median(x)
+  c<-quantile(x, probs = c(0.25, 0.75))
+  if (is.null (myname)) {
+    abc<-c(n,mymean,ab,b,c)
+    names(abc)<- c("n","mean","2.5%","97.5%","sd","median","q1","q3") 
+  } else {
+    v<-myname
+    abc<-c(v,n,mymean,ab,b,c)
+    names(abc)<- c("result","n","mean","2.5%","97.5%","sd","median","q1","q3")  
+  }
+  return(abc)
+}
+
+
+#FREQUENCE SOCIO SELON SERVICE
+#internet et telephone separe
+fun.socio3 <- function (service, data){
+  soc1<-summary(data[data$service.recode==service,"Age"])
+  soc2<-table(data[data$service.recode==service,"Sexe"])
+  soc3<-table(data[data$service.recode==service,"socio3"])
+  soc4<-table(data[data$service.recode==service,"socio4"])
+  soc5<-table(data[data$service.recode==service,"socio5"])
+  soc8<-table(data[data$service.recode==service,"socio8"])
+  res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6], "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]")
+  res2 <- paste0 ("\n\nSexe=M: ", soc2[2], " (", round (soc2[2]/sum (soc2)*100, 1), "%)")
+  res3 <- paste0(c ("jusqu'au 1er cycle secondaire : ", " jusqu'au second cycle secondaire : ", " jusqu'au superieur court ou post secondaire : ", " enseignement superieur : "), soc3," (", round(prop.table(soc3),3)*100,"%)")
+  res4 <- paste0(c("seul : "," en couple : "),soc4," (",round(prop.table(soc4),3)*100,"%)")
+  res5 <- paste0(c("emploi ou etude : "," sans activite : "),soc5," (",round(prop.table(soc5),3)*100,"%)")
+  res8 <- paste0(c("precaire : "," secu : "," secu et mutuelle : "),soc8," (",round(prop.table(soc8),3)*100,"%)")
+  cat (service, ":\n\n", res1, res2, "\n\nEducation :\n", paste (res3, collapse="\n"),"\n\nStatut marital :\n",paste (res4, collapse="\n"),"\n\nActivité :\n",paste(res5,collapse="\n"),"\n\nRegime :\n",paste(res8,collapse="\n"), "\n\n********************\n\n")
+  return("OK")
+}
+
+#internet et telephone dans meme feuille
+#data1=telephone, data2 = internet
+fun.socio4 <- function (service, data1, data2){
+  soc1<-summary(data1[data1$service.recode==service,"Age"])
+  soc2<-table(data1[data1$service.recode==service,"Sexe"])
+  soc3<-table(data1[data1$service.recode==service,"socio3"])
+  soc4<-table(data1[data1$service.recode==service,"socio4"])
+  soc5<-table(data1[data1$service.recode==service,"socio5"])
+  soc8<-table(data1[data1$service.recode==service,"socio8"])
+  soc1b<-summary(data2[data2$service.recode==service,"Age"])
+  soc2b<-table(data2[data2$service.recode==service,"Sexe"])
+  soc3b<-table(data2[data2$service.recode==service,"socio3"])
+  soc4b<-table(data2[data2$service.recode==service,"socio4"])
+  soc5b<-table(data2[data2$service.recode==service,"socio5"])
+  soc8b<-table(data2[data2$service.recode==service,"socio8"])
+  res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6]," / ", as.numeric(soc1b)[1],",",as.numeric (soc1b)[6], 
+                  "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]", 
+                  " / ",as.numeric (soc1b)[3], " [", as.numeric (soc1b)[2], ", ", as.numeric (soc1b)[5], "]")
+  res2 <- paste0 ("\n\nSexe=M: ", soc2[2], " (", round (soc2[2]/sum (soc2)*100, 1), "%)", " / ",soc2b[2], " (", round (soc2b[2]/sum (soc2b)*100, 1), "%)" )
+  res3 <- paste0(c ("jusqu'au 1er cycle secondaire : ", " jusqu'au second cycle secondaire : ", " jusqu'au superieur court ou post secondaire : ", " enseignement superieur : "),
+                 soc3," (", round(prop.table(soc3),3)*100,"%)"," / ",soc3b," (", round(prop.table(soc3b),3)*100,"%)")
+  res4 <- paste0(c("seul : "," en couple : "),soc4,"(",round(prop.table(soc4),3)*100,"%)"," / ",soc4b,"(",round(prop.table(soc4b),3)*100,"%)")
+  res5 <- paste0(c("emploi ou etude : "," sans activite : "),soc5," (",round(prop.table(soc5),3)*100,"%)"," / ",soc5b," (",round(prop.table(soc5b),3)*100,"%)")
+  res8 <- paste0(c("precaire : "," secu : "," secu et mutuelle : "),soc8," (",round(prop.table(soc8),3)*100,"%)"," / ",soc8b," (",round(prop.table(soc8b),3)*100,"%)")
+  cat (service, ": telephone/internet\n\n", res1, res2, "\n\nEducation :\n", paste (res3, collapse="\n"),"\n\nStatut marital :\n",paste (res4, collapse="\n"),"\n\nActivité :\n",paste(res5,collapse="\n"),"\n\nRegime :\n",paste(res8,collapse="\n"), "\n\n********************\n\n")
+  return("OK")
+}
+#service<-"CHIRURGIE DIGESTIVE"
+#data1<-d
+#data2<-f
+
+fun.socio5 <- function (service, data1, data2){
+  soc1<-summary(data1[data1$service.recode==service,"Age"])
+  soc2<-table(data1[data1$service.recode==service,"Sexe"])
+  soc3<-table(data1[data1$service.recode==service,"socio3"])
+  soc4<-table(data1[data1$service.recode==service,"socio4"])
+  soc5<-table(data1[data1$service.recode==service,"socio5"])
+  soc8<-table(data1[data1$service.recode==service,"socio8"])
+  soc1b<-summary(data2[data2$service.recode==service,"Age"])
+  soc2b<-table(data2[data2$service.recode==service,"Sexe"])
+  soc3b<-table(data2[data2$service.recode==service,"socio3"])
+  soc4b<-table(data2[data2$service.recode==service,"socio4"])
+  soc5b<-table(data2[data2$service.recode==service,"socio5"])
+  soc8b<-table(data2[data2$service.recode==service,"socio8"])
+  res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6]," / ", as.numeric(soc1b)[1],",",as.numeric (soc1b)[6], 
+                  "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]", 
+                  " / ",as.numeric (soc1b)[3], " [", as.numeric (soc1b)[2], ", ", as.numeric (soc1b)[5], "]")
+  res2 <- paste0 ("\n\nSexe=M: ", soc2[2], " (", round (soc2[2]/sum (soc2)*100, 1), "%)", " / ",soc2b[2], " (", round (soc2b[2]/sum (soc2b)*100, 1), "%)" )
+  res3 <- paste0(c ("jusqu'au 1er cycle secondaire : ", " jusqu'au second cycle secondaire : ", " jusqu'au superieur court ou post secondaire : ", " enseignement superieur : "),
+                 soc3," (", round(prop.table(soc3),3)*100,"%)"," / ",soc3b," (", round(prop.table(soc3b),3)*100,"%)")
+  res4 <- paste0(c("seul : "," en couple : "),soc4,"(",round(prop.table(soc4),3)*100,"%)"," / ",soc4b,"(",round(prop.table(soc4b),3)*100,"%)")
+  res5 <- paste0(c("emploi ou etude : "," sans activite : "),soc5," (",round(prop.table(soc5),3)*100,"%)"," / ",soc5b," (",round(prop.table(soc5b),3)*100,"%)")
+  res8 <- paste0(c("precaire : "," secu : "," secu et mutuelle : "),soc8," (",round(prop.table(soc8),3)*100,"%)"," / ",soc8b," (",round(prop.table(soc8b),3)*100,"%)")
+  cat (res1, res2, "\n\nEducation :\n", paste (res3, collapse="\n"),"\n\nStatut marital :\n",paste (res4, collapse="\n"),"\n\nActivité :\n",paste(res5,collapse="\n"),"\n\nRegime :\n",paste(res8,collapse="\n"), "\n\n********************\n\n")
+  return("OK")
+}
+
+#RESULTAT THEME SELON SERVICE
+fun.score <- function(service,data) {
+  #  browser()
+  theme <- data.frame (t (sapply (1:6, function (x) scoreestim (data[data$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  final <- data.frame(t(scoreestim(data[data$service.recode==service,"res.score.final"],"score final")))
+  output <- rbind(theme,final)
+  #  write.table(print(output),file="clipboard",sep="\t",dec=",",row.names=FALSE) 
+  output
+}
 
 
 
