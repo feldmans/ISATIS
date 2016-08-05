@@ -12,6 +12,132 @@ source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isa
 source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/objects Isatis.R")
 
 
+
+########### TABLE 1 : CARACTERISTIQUES DES PATIENTS ############
+cbind(num_col[order(num_col)],myname_col[order(num_col)])
+# "Age"            "socio1"
+# "Sexe"           "socio2"
+# "Education"      "socio3"
+# "Statut marital" "socio4"
+# "Emploi"         "socio5"
+# "Revenu"         "socio6"
+# "Profession"     "socio7"
+# "Assurance"      "socio8"
+
+#TABLE 1:
+#cf fonctions Des (pour description) dans fonction_ISATIS.R et variables r1 : 8 dans objects_Isatis.R
+write.table(print(rbind(r1,r8,r2,r3,r4,r5,r6,r7)),file="clipboard",sep="\t",dec=",",row.names=TRUE)
+
+#vérif age tot:
+summary (c(d$socio1[d$Duree>=2],f$socio1[f$Duree>=2])) 
+#verif age non repondant int
+summary (d[d$Duree>=2 & d$repondant%in%"non", "socio1"])
+
+#verif des legendes du tableau (est-ce que resultat correspond bien a la legende) : prise de l'exemple repondant internet
+table (d[d$Duree>=2,"socio2"],d[d$Duree>=2, "repondant"]) #remplace socio pour chaque caracteristique et verif avec tableau du dessus
+table (d[d$Duree>=2,"socio3"],d[d$Duree>=2, "repondant"])
+table (d[d$Duree>=2,"socio4"],d[d$Duree>=2, "repondant"])
+table (d[d$Duree>=2,"socio5"],d[d$Duree>=2, "repondant"])
+table (d[d$Duree>=2,"socio6"],d[d$Duree>=2, "repondant"])
+table (d[d$Duree>=2,"socio7"],d[d$Duree>=2, "repondant"])
+table (d[d$Duree>=2,"socio8"],d[d$Duree>=2, "repondant"])
+
+
+
+###### TESTS SUR ANALYSES SOCIO : PAS DANS MANUSCRIT ########
+
+num_col <- paste0("socio",c(1,3,6,8,2,4,5,7))
+myname_col <- c("Age","Education","Revenu","Assurance","Sexe","Statut marital","Emploi","Profession")
+name_test <- c(rep("Wilcoxon",4),rep("fisher",4))
+
+#tableau test internet
+wx_i <- sapply(c(1,3,6,8), function(x) wilcox.test(d[d$nonHDJ%in%"non_repondant", paste0("socio",x)],d[d$nonHDJ%in%"repondant",paste0("socio",x)])$p.value)
+st_i <- sapply(c(2,4,5,7), function(x) fisher.test(table(d$nonHDJ,d[,paste0("socio",x)]),workspace = 800000000)$p.value)
+
+#tableau test telephone
+wx_t <- sapply(c(1,3,6,8), function(x) wilcox.test(f[f$nonHDJ%in%"non_repondant", paste0("socio",x)],f[f$nonHDJ%in%"repondant",paste0("socio",x)])$p.value)
+st_t <- sapply(c(2,4,5,7), function(x) fisher.test(table(f$nonHDJ,f[,paste0("socio",x)]),workspace = 800000000)$p.value)
+
+#repI/repT
+s1it <- sapply(c(1,3,6,8),function(x)wilcox.test(d[d$nonHDJ%in%"repondant", paste0("socio",x)],f[f$nonHDJ%in%"repondant", paste0("socio",x)])$p.value)
+dtit <- sapply(c(2,4,5,7), function(x) fisher.test(
+  smartbind(table(d[d$nonHDJ=="repondant",paste0("socio",x)]),table(f[f$nonHDJ=="repondant",paste0("socio",x)]),fill=0),
+  workspace=100000000)$p.value)
+
+r_nr <- data.frame (int=c(wx_i,st_i), tel=c(wx_t,st_t), it=c(s1it,dtit))
+r_nr <- cbind(num_col,myname_col,r_nr,name_test)
+colnames(r_nr)<-c("socio","variable","p_val rep/nrep int","p_val rep/nrep tel","comparaison rep i et t" ,"test")
+write.table(print(r_nr),file="clipboard",sep="\t",dec=".",row.names=FALSE)
+
+
+######### CALCUL TABLE 2 : COEFFICIENTS DE CROHNBACH ############
+
+#CALCUL DES CRONBACH et 95%CI
+
+set.seed(12345)
+crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000)))) #nb : les alpha sont calculés de la meme facon que dans le tableau du test de permutation ci dessous
+
+#P VALUE CRONBACH : TEST DE PERMUTATION
+#1/GENERE les 10E6 permutations cronbach, calcul (ni,alphai,nt,alphat,diff,pval,n_perm), et enregistre les 10E6 perm ([[1]]) et (ni,alphai,nt,alphat,diff,pval,n_perm) [[2]]
+set.seed(1234)
+for (i in 1:6){
+  res.perm<-perm.cronbach.theme(x=i,1000000) #le resultat est une liste :[[1]] 10E6 valeur de permutation [[2]]tableau de résultat
+  saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))
+}
+res.perm<-perm.cronbach.fin(1000000)
+saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
+
+#2/lecture des Pvalue : assigne le tableau de cronbach a res.perm1:6 et res.permfin
+.set<-"C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/"
+for (i in 1:6){
+  assign((paste0("res.perm",i)),readRDS(paste0(.set,"perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
+}
+res.permfin<-readRDS(paste0(.set,"perm10E6.pval.cronbach.fin.Rdata"))[[2]]
+getwd()
+
+#3/crée un seul tableau cronbach avec ni,alphai,nt,alphat,diff,pval,n_perm (seul pval est utilisé dans le manuscrit)
+for (i in c(1:6,"fin")){
+  tab<-get(paste0("res.perm",i))
+  if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
+}
+
+write.table(print(tabcron),file="clipboard",sep="\t",dec=".",row.names=FALSE)
+
+
+
+#######CALCULS TABLE 3 : MEAN, diffMEAN, PVAL, ES ############
+
+#MEAN IC DES THEMES ET SCORES FINAUX PAR BOOTSTRAP
+set.seed(123) 
+#N,moyenne(IC) des themes
+MCi.theme <- t(sapply(1:6,function(x)BootMCi (paste0("res.theme",x),20000)))
+MCi.theme<- data.frame(rbind(MCi.theme,BootMCi("res.score.final",20000)))
+
+#Effect size
+ES.theme <- sapply(1:6,function(x)BootCi(.theme=paste0("res.theme",x),R=20000))
+ES.theme <- data.frame(c(ES.theme,BootCi(.theme="res.score.final",R=20000))) ;names(ES.theme)<- "Effect size"
+
+#Calcul difference de moyenne et CI
+difMCi<- sapply(1:6,function(x)boot.diff.ci(paste0("res.theme",x),R=20000))
+difMCi <- data.frame(c(difMCi,boot.diff.ci("res.score.final",R=20000))) ;names(difMCi)<- "Difference telephone-internet"
+
+#COMPARAISON DES THEMES PAR TEST DE PERMUTATION
+#cf fonction dans script "test de permutation 2016 07 12.R"
+r16<- sapply(c(1:6),function(.x)perm.moyenne.th(x=.x,d,f,1000000)$p_value)
+rf<-perm.moyenne.fin(1000000)$p_value 
+
+pval.tot <- data.frame(c(r16,rf)) ; pval.tot<- round(pval.tot,3) ; names(pval.tot) <- "p value"
+
+#TABLEAU SCORE, ES ET P
+tab.theme <- cbind(MCi.theme,difMCi,ES.theme,pval.tot)
+write.table(print(tab.theme),file="clipboard",sep="\t",dec=".",row.names=FALSE)
+
+
+######### FIGURE 1 : study profile ############
+
+
+
+
 #CB DE PATIENTS REPONDENT A COMBIEN D'ITEMS
 
 #Liste des modalites de reponse par question (liste 1 = question 1)
@@ -104,14 +230,8 @@ table(ITpat$Q19) # 1: concerne 2: non concerne, sauter question 20, 10: ne souha
 
 
 
-#CARACTERISTIQUES DES PATIENTS
-#cf fonctions Des... et variables r1 ? 8 dans intro
-write.table(print(rbind(r1,r8,r2,r3,r4,r5,r6,r7)),file="clipboard",sep="\t",dec=",",row.names=TRUE)
 
-#verif des legendes
-summary (d$socio1)
-summary (d[d$Duree>=2 & d$repondant%in%"non", "socio1"])
-table (d[d$Duree>=2,"socio3"],d[d$Duree>=2, "repondant"]) #remplace socio pour chaque caracteristique et verif avec tableau du dessus
+
 
 #FLOW CHART
 
@@ -178,141 +298,10 @@ nrow(f[f$repondant=="oui" & f$Duree>=2 & f$Type_Hospi=="HC",])#equivalent a tabl
 nrow(d[d$repondant=="oui" & d$Duree>=2,]) #equivalent a table(d$nonHDJ) et table(d$repondant,d$Duree>=2)
 
 
-#ANALYSES SOCIO
-
-
-#TESTS
-num_col <- paste0("socio",c(1,3,6,8,2,4,5,7))
-myname_col <- c("Age","Education","Revenu","Assurance","Sexe","Statut marital","Emploi","Profession")
-name_test <- c(rep("Wilcoxon",4),rep("fisher",4))
-
-#tableau test internet
-s1i <- sapply(c(1,3,6,8), function(x) wilcox.test(d[d$nonHDJ%in%"non_repondant", paste0("socio",x)],d[d$nonHDJ%in%"repondant",paste0("socio",x)])$p.value)
-dti <- sapply(c(2,4,5,7), function(x) fisher.test(table(d$nonHDJ,d[,paste0("socio",x)]),workspace = 800000000)$p.value)
-s1_8i<- data.frame(c(s1i,dti))
-tabi <- cbind(num_col,myname_col,s1_8i,name_test)
-colnames(tabi)<-c("socio","variable","p.value rep/nrep","test")
-write.table(print(tabi),file="clipboard",sep="\t",dec=".",row.names=FALSE)
-
-#tableau test telephone
-s1t <- sapply(c(1,3,6,8), function(x) wilcox.test(f[f$nonHDJ%in%"non_repondant", paste0("socio",x)],f[f$nonHDJ%in%"repondant",paste0("socio",x)])$p.value)
-dtt <- sapply(c(2,4,5,7), function(x) fisher.test(table(f$nonHDJ,f[,paste0("socio",x)]),workspace = 800000000)$p.value)
-s1_8t<- data.frame(c(s1t,dtt))
-tabt <- cbind(num_col,myname_col,s1_8t,name_test)
-colnames(tabt)<-c("socio","variable","p.value rep/nrep","test")
-write.table(print(tabt),file="clipboard",sep="\t",dec=".",row.names=FALSE)
-
-
-#repI/repT
-s1it <- sapply(c(1,3,6,8),function(x)wilcox.test(d[d$nonHDJ%in%"repondant", paste0("socio",x)],f[f$nonHDJ%in%"repondant", paste0("socio",x)])$p.value)
-dtit <- sapply(c(2,4,5,7), function(x) fisher.test(
-  smartbind(table(d[d$nonHDJ=="repondant",paste0("socio",x)]),table(f[f$nonHDJ=="repondant",paste0("socio",x)]),fill=0),
-  workspace=100000000)$p.value)
-s1_8it<- data.frame(c(s1it,dtit))
-tab_it <- cbind(num_col,myname_col,s1_8it,name_test)
-colnames(tab_it)<-c("socio","num","p.value repI/repT")
-write.table(print(tab_it),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 
 
-#MEAN IC DES THEMES ET SCORES FINAUX PAR BOOTSTRAP
-set.seed(123) 
-#N,moyenne(IC) des themes
-MCi.theme <- t(sapply(1:6,function(x)BootMCi (paste0("res.theme",x),20000)))
-MCi.theme<- data.frame(rbind(MCi.theme,BootMCi("res.score.final",20000)))
-# 
-#Effect size
-ES.theme <- sapply(1:6,function(x)BootCi(.theme=paste0("res.theme",x),R=20000))
-ES.theme <- data.frame(c(ES.theme,BootCi(.theme="res.score.final",R=20000))) ;names(ES.theme)<- "Effect size"
-# Effect size en passant par log avec retour a l'expo ensuite
-#  ES.theme <- sapply(1:6,function(x)BootCi.log(.theme=paste0("res.theme",x),R=2000))
-#  ES.theme <- data.frame(c(ES.theme,BootCi.log(.theme="res.score.final",R=2000))) ;names(ES.theme)<- "Effect size"
 
-# #Effect size pour les themes 5 et 6 (les 2 posant pb) en prenant la meme graine
-# for(i in 1:10){
-# set.seed(i)
-# ES.theme.1 <- sapply(5:6,function(x)BootCi.log(.theme=paste0("res.theme",x),R=2000))
-# set.seed(i)
-# ES.theme.2 <- sapply(5:6,function(x)BootCi(.theme=paste0("res.theme",x),R=2000))
-# print(c(paste("seed",i),ES.theme.1,ES.theme.2))
-# }
-
-#Calcul difference de moyenne et CI
-difMCi<- sapply(1:6,function(x)boot.diff.ci(paste0("res.theme",x),R=20000))
-difMCi <- data.frame(c(difMCi,boot.diff.ci("res.score.final",R=20000))) ;names(difMCi)<- "Difference telephone-internet"
-
-
-# #MEAN IC DES THEMES ET SCORES FINAUX SANS BOOTSTRAP
-# 
-# #N, moyenne (IC)
-# MCi.theme <- t(sapply(1:6, function(x)NMCI (paste0("res.theme",x))))
-# MCi.theme <- data.frame(rbind(MCi.theme, NMCI("res.score.final")))
-# 
-# #Effect size
-# ES.theme <- sapply(1:6,function(x)ESfun(.theme=paste0("res.theme",x)))
-# ES.theme <- data.frame(c(ES.theme, ESfun("res.score.final"))) ; colnames(ES.theme)<-"ES CI"
-# 
-# #difference de moyenne
-# difMCi<- sapply(1:6,function(x)diffmfun(paste0("res.theme",x)))
-# difMCi <- data.frame(c(difMCi,diffmfun("res.score.final"))) ;names(difMCi)<- "Difference telephone-internet"
-
-
-# #COMPARAISON DES THEMES PAR WILCOXON :repI vs repT. on garde lignes avec theme valide meme si score final invalide 
-# r16<-sapply(1:6, function(x) wilcox.test(na.omit(d[,paste0("res.theme",x)]),na.omit(f[,paste0("res.theme",x)]))$p.value)
-# rf<- wilcox.test(na.omit(d$res.score.final),na.omit(f$res.score.final))$p.value  #NB : na sont automatiquement "omitted" par wilcox.test
-# #t.test(d$res.score.final,f$res.score.final)
-
-#ATTENTION : ancien code : j'avais retirer les lignes na des scores globaux pour les wilcox des themes
-# r16 <- data.frame(sapply(1:6,function(x) wilcox.test(
-# d[!is.na(paste0("res.theme",x)) & !is.na(d$res.score.final), paste0("res.theme",x)],
-# f[!is.na(paste0("res.theme",x)) & !is.na(f$res.score.final),paste0("res.theme",x)]
-# )$p.value))
-
-
-#COMPARAISON DES THEMES PAR TEST DE PERMUTATION
-#cf fonction dans script "test de permutation 2016 07 12.R"
-r16<- sapply(c(1:6),function(.x)perm.moyenne.th(x=.x,d,f,1000000)$p_value)
-rf<-perm.moyenne.fin(1000000)$p_value 
-
-pval.tot <- data.frame(c(r16,rf)) ; pval.tot<- round(pval.tot,3) ; names(pval.tot) <- "p value"
-
-#TABLEAU SCORE, ES ET P
-tab.theme <- cbind(MCi.theme,difMCi,ES.theme,pval.tot)
-write.table(print(tab.theme),file="clipboard",sep="\t",dec=".",row.names=FALSE)
-
-
-#COEFFICIENT DE CROHNBACH
-
-#CALCUL DES CRONBACH et 95%CI
-
-set.seed(12345)
-crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000)))) #nb : les alpha sont calculés de la meme facon que dans le tableau du test de permutation ci dessous
-
-#P VALUE CRONBACH : TEST DE PERMUTATION
-#1/GENERE les 10E6 permutations cronbach, calcul (ni,alphai,nt,alphat,diff,pval,n_perm), et enregistre les 10E6 perm ([[1]]) et (ni,alphai,nt,alphat,diff,pval,n_perm) [[2]]
-set.seed(1234)
-for (i in 1:6){
-  res.perm<-perm.cronbach.theme(x=i,1000000) #le resultat est une liste :[[1]] 10E6 valeur de permutation [[2]]tableau de résultat
-  saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))
-}
-res.perm<-perm.cronbach.fin(1000000)
-saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
-
-#2/lecture des Pvalue : assigne le tableau de cronbach a res.perm1:6 et res.permfin
-.set<-"C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/"
-for (i in 1:6){
-  assign((paste0("res.perm",i)),readRDS(paste0(.set,"perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
-}
-res.permfin<-readRDS(paste0(.set,"perm10E6.pval.cronbach.fin.Rdata"))[[2]]
-getwd()
-
-#3/crée un seul tableau cronbach avec ni,alphai,nt,alphat,diff,pval,n_perm (seul pval est utilisé dans le manuscrit)
-for (i in c(1:6,"fin")){
-  tab<-get(paste0("res.perm",i))
-  if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
-}
-
-write.table(print(tabcron),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 
 
