@@ -36,9 +36,11 @@ d$Date_Sortie2 <- as.Date(d$Date_Sortie, format = "%j/%m/%y")
 d$Isatis_Date2 <- as.Date(d$ISatis_Date, format = "%j/%m/%y")
 d$groupe <- rep("int",nrow(d))
 
+#Repondant = a repondu à 16 Questions ou plus. non repondant = reponse a moins de 16 questions  
 #d$repondant <- ifelse(d$ISATIS%in%"Complet","oui","non")
 d$repondant <- ifelse (rowSums(!is.na(d[,paste0("ISatis_Q",1:32)]))>15,"oui",NA)
 d$repondant <- ifelse (rowSums(!is.na(d[,paste0("ISatis_Q",1:32)]))<=15,"non",d$repondant)
+
 d$nonHDJ <- ifelse(d$Duree>=2 & d$repondant%in%"oui","repondant",NA) #les repondant sont non HDJ et complet
 d$nonHDJ <- ifelse(d$Duree>=2 & d$repondant%in%"non","non_repondant",d$nonHDJ)#les non repondant sont non HDJ et incomplet
 
@@ -91,9 +93,12 @@ f$Duree <- as.numeric(b.tel-a.tel)
 f$Date_Sortie2 <- as.Date(f$Date_Sortie, format = "%j/%m/%y")
 f$Isatis_Date2 <- as.Date(f$ISatis_Date, format = "%j/%m/%y")
 f$groupe <- rep("tel",nrow(f))
-#f$repondant <- ifelse(f$ISATIS%in%"Complet","oui","non")
+
+#Repondant = a repondu à 16 Questions ou plus. non repondant = reponse a moins de 16 questions 
+#f$repondant <- ifelse(f$ISATIS%in%"Complet","oui","non") #code en complet/incomplet/non sans savoir def de chaque codage.
 f$repondant <- ifelse (rowSums(!is.na(f[,paste0("ISatis_Q",1:32)]))>15,"oui",NA)
 f$repondant <- ifelse (rowSums(!is.na(f[,paste0("ISatis_Q",1:32)]))<=15,"non",f$repondant)
+
 f$nonHDJ <- ifelse(f$Duree>=2 & f$repondant%in%"oui","repondant",NA)
 f$nonHDJ <- ifelse(f$Duree>=2 & f$repondant%in%"non","non_repondant",f$nonHDJ)
 f$service.recode <- f$Service
@@ -163,10 +168,10 @@ mean(c(drev,frev))
 d[d$socio6%in%c(8,9),"socio6"] <- mean(c(drev,frev)) 
 f[f$socio6%in%c(8,9),"socio6"] <- mean(c(drev,frev))
 
-r1<-DesN2 (2)    #2 = nombre de nuits
+r1<-DesN (2)    #2 = nombre de nuits
 r8 <- DesDuree(2)
 r2<- DesSexe(2)
-r3<- DesAge2(2)
+r3<- DesAge(2)
 r4<- DesMarital(2)
 r5<- DesEduc(2)
 r6 <- DesEmploi(2)

@@ -51,7 +51,7 @@ decode_answer_prof <- function(answer_prof) as.numeric (substr (answer_prof, 1, 
 #Pour chaque fonction, résultat en 5 groupes: .int : repondant et non repondant internet séparemment, .tel: idem pour tel, .som : description int et tel ensemble
 
 #Effectifs 
-DesN2 <- function (duree) {
+DesN <- function (duree) {
   .d <- d %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(n=n())
   #.grp <- .d$n
   #.tot <- sum (.grp)
@@ -80,7 +80,7 @@ DesN2 <- function (duree) {
 }
 
 #Age 
-DesAge2 <- function (duree) {
+DesAge <- function (duree) {
   .d <- d %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(med=median(Age), q1=quantile(Age, .25), q3=quantile(Age, .75))
   .int <- data.frame(rbind(.d[2,],.d[1,]))
   .d <- f %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(med=median(Age), q1=quantile(Age, .25), q3=quantile(Age, .75))
