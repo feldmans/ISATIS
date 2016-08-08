@@ -44,45 +44,43 @@ decode_answer2 <- function(answer_ori)
 
 
 ###############FONCTION POUR LA TABLE 1 SOCIODEMO#########################
+duree<-2#pour tester les fonctions
 
 decode_answer_prof <- function(answer_prof) as.numeric (substr (answer_prof, 1, 1))
 
+#Pour chaque fonction, résultat en 5 groupes: .int : repondant et non repondant internet séparemment, .tel: idem pour tel, .som : description int et tel ensemble
+
+#Effectifs 
 DesN2 <- function (duree) {
-  #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(n=n())
   .d <- d %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(n=n())
   .grp <- .d$n
   .tot <- sum (.grp)
   .grp <- c (Total=.tot, Responders_int=.grp[2], Nonresponders_int=.grp[1])
   .int <- .grp
-  
-  #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(n=n())
-  .d <- f %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(n=n())
+    .d <- f %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(n=n())
   .grp <- .d$n
   .tot <- sum (.grp)
   .grp <- c (Total=.tot, Responders_tel=.grp[2], Nonresponders_tel=.grp[1])
   .tel <- .grp
-  
   .all <- .int + .tel
-  
   .res <- t(data.frame(c(.all[1],.int[2:3],.tel[2:3])))
   row.names(.res)<-NULL
   .res <- rbind (colnames(.res),paste("N=",c(.all[1],.int[2:3],.tel[2:3])))
   return (.res)
 }
 
+#Age 
 DesAge2 <- function (duree) {
-  #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(med=median(Age), q1=quantile(Age, .25), q3=quantile(Age, .75))
   .d <- d %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(med=median(Age), q1=quantile(Age, .25), q3=quantile(Age, .75))
   .int <- data.frame(rbind(.d[2,],.d[1,]))
-  #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(med=median(Age), q1=quantile(Age, .25), q3=quantile(Age, .75))
   .d <- f %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(med=median(Age), q1=quantile(Age, .25), q3=quantile(Age, .75))
   .tel <- data.frame(rbind(.d[2,],.d[1, ]))      
-  #.som<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Age),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Age)))
   .som<-unlist(c(d %>% filter (Duree>=duree ) %>% select(Age),f %>% filter (Duree>=duree ) %>% select(Age)))
   .som <- c(totmed=median(.som),totq1=as.numeric(quantile(.som,.25)),totq3=as.numeric(quantile(.som,.75)))
   .som<-c(repondant="total",med=as.numeric(.som[1]),q1=as.numeric(.som[2]),q3=as.numeric(.som[3]))
   .res <- rbind(total=.som,internet=.int,telephone=.tel)
-  .fin <- for (i in 1:5) {
+  #.fin <- for (i in 1:5) {
+  for (i in 1:5) {
     resint<- paste0(.res[i,2]," (",.res[i,3],"-",.res[i,4],")")
     if (i==1) res <- resint else res <- rbind (res, resint)
   }
@@ -92,13 +90,10 @@ DesAge2 <- function (duree) {
 }
 
 DesSexe <- function (duree){  
-  #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(Sexe)
   .d <- d %>% filter (Duree>=duree )  %>% group_by(repondant) %>%  select(Sexe)
   .int <-table (.d)
-  #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(Sexe)
   .d <- f %>% filter (Duree>=duree )  %>% group_by(repondant) %>%  select(Sexe)
   .tel <-table (.d)
-  #.d<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Sexe),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Sexe)))
   .d<-unlist(c(d %>% filter (Duree>=duree) %>% select(Sexe),f %>% filter (Duree>=duree) %>% select(Sexe)))
   .som <-table (.d)
   .fin <- as.vector(rbind(.som,.int[c(2,1),],.tel[c(2,1),])[,2])
@@ -113,13 +108,10 @@ DesSexe <- function (duree){
 
 #nb de nuits by responders med IQR
 DesDuree <- function(duree){
-  #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(med=median(Duree), q1=quantile(Duree, .25), q3=quantile(Duree, .75))
   .d <- d %>% filter (Duree>=duree ) %>% group_by(repondant) %>% summarise(med=median(Duree), q1=quantile(Duree, .25), q3=quantile(Duree, .75))
   .int <- data.frame(rbind(.d[2,],.d[1,]))  
-  #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(med=median(Duree), q1=quantile(Duree, .25), q3=quantile(Duree, .75))
   .d <- f %>% filter (Duree>=duree ) %>% group_by(repondant) %>% summarise(med=median(Duree), q1=quantile(Duree, .25), q3=quantile(Duree, .75))
   .tel <- data.frame(rbind(.d[2,],.d[1,]))  
-  #.som<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Duree),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Duree)))
   .som<-unlist(c(d %>% filter (Duree>=duree ) %>% select(Duree),f %>% filter (Duree>=duree) %>% select(Duree)))
   .som <- c(totmed=median(.som),totq1=as.numeric(quantile(.som,.25)),totq3=as.numeric(quantile(.som,.75)))
   .som<-c(repondant="total",med=as.numeric(.som[1]),q1=as.numeric(.som[2]),q3=as.numeric(.som[3]))
@@ -134,13 +126,10 @@ DesDuree <- function(duree){
 }
 #nb de nuits by responders mean sd
 DesDureebis <- function(duree){
-  #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(mean=mean(Duree), sd=sd(Duree))
   .d <- d %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(mean=mean(Duree), sd=sd(Duree))
   .int <- data.frame(rbind(.d[2,],.d[1,]))  
-  #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% group_by(repondant) %>% summarise(mean=mean(Duree), sd=sd(Duree))
   .d <- f %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(mean=mean(Duree), sd=sd(Duree))
   .tel <- data.frame(rbind(.d[2,],.d[1,]))  
-  #.som<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Duree),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(Duree)))
   .som<-unlist(c(d %>% filter (Duree>=duree) %>% select(Duree),f %>% filter (Duree>=duree)%>% select(Duree)))
   #.som <-c(repondant="total",c(totmean=mean(.som),totsd=sd(.som)))
   .som <-c(totmean=mean(.som),totsd=sd(.som))
@@ -156,13 +145,10 @@ DesDureebis <- function(duree){
 
 DesEduc <- function(duree){
   for (i in 1:4){
-    #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio3)
     .d <- d %>% filter (Duree>=duree )  %>% group_by(repondant) %>%  select(socio3)
     .int <-table (.d)
-    #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio3)
     .d <- f %>% filter (Duree>=duree )  %>% group_by(repondant) %>%  select(socio3)
     .tel <-table (.d)
-    #.d<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio3),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio3)))
     .d<-unlist(c(d %>% filter (Duree>=duree ) %>% select(socio3),f %>% filter (Duree>=duree ) %>% select(socio3)))
     .som <-table (.d)
     .fin <- as.vector(rbind(.som,.int[c(2,1),],.tel[c(2,1),])[,i])
@@ -179,13 +165,10 @@ DesEduc <- function(duree){
 
 DesMarital <- function (duree) {
   for (i in 1:2){
-    #    .d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio4)
     .d <- d %>% filter (Duree>=duree )  %>% group_by(repondant) %>%  select(socio4)
     .int <-table (.d)
-    #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio4)
     .d <- f %>% filter (Duree>=duree )  %>% group_by(repondant) %>%  select(socio4)
     .tel <-table (.d)
-    #.d<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio4),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio4)))
     .d<-unlist(c(d %>% filter (Duree>=duree ) %>% select(socio4),f %>% filter (Duree>=duree) %>% select(socio4)))
     .som <-table (.d)
     .fin <- as.vector(rbind(.som,.int[c(2,1),],.tel[c(2,1),])[,i])
@@ -202,13 +185,10 @@ DesMarital <- function (duree) {
 
 DesEmploi <- function(duree) {
   for (i in 1:2){
-    #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio5)
     .d <- d %>% filter (Duree>=duree)  %>% group_by(repondant) %>%  select(socio5)
     .int <-table (.d)
-    #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio5)
     .d <- f %>% filter (Duree>=duree)  %>% group_by(repondant) %>%  select(socio5)
     .tel <-table (.d)
-    #.d<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio5),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio5)))
     .d<-unlist(c(d %>% filter (Duree>=duree ) %>% select(socio5),f %>% filter (Duree>=duree ) %>% select(socio5)))
     .som <-table (.d)
     .fin <- as.vector(rbind(.som,.int[c(2,1),],.tel[c(2,1),])[,i])
@@ -225,13 +205,10 @@ DesEmploi <- function(duree) {
 
 DesAssurance <- function(duree) {
   for (i in 1:3){
-    #.d <- d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio8)
     .d <- d %>% filter (Duree>=duree)  %>% group_by(repondant) %>%  select(socio8)
     .int <-table (.d)
-    #.d <- f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 ))  %>% group_by(repondant) %>%  select(socio8)
     .d <- f %>% filter (Duree>=duree)  %>% group_by(repondant) %>%  select(socio8)
     .tel <-table (.d)
-    #.d<-unlist(c(d %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio8),f %>% filter (Duree>=duree & (nitems==0 | nitems>=15 )) %>% select(socio8)))
     .d<-unlist(c(d %>% filter (Duree>=duree ) %>% select(socio8),f %>% filter (Duree>=duree ) %>% select(socio8)))
     .som <-table (.d)
     .fin <- as.vector(rbind(.som,.int[c(2,1),],.tel[c(2,1),])[,i])
