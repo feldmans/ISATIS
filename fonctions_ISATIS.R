@@ -116,7 +116,7 @@ DesDuree <- function(duree){
   .som <- c(totmed=median(.som),totq1=as.numeric(quantile(.som,.25)),totq3=as.numeric(quantile(.som,.75)))
   .som<-c(repondant="total",med=as.numeric(.som[1]),q1=as.numeric(.som[2]),q3=as.numeric(.som[3]))
   .res <- rbind(total=.som,internet=.int,telephone=.tel)
-  .fin <- for (i in 1:5) {
+  for (i in 1:5) {
     resint<- paste0(.res[i,2]," (",.res[i,3],"-",.res[i,4],")")
     if (i==1) res <- resint else res <- rbind (res, resint)
   }
@@ -134,7 +134,7 @@ DesDureebis <- function(duree){
   #.som <-c(repondant="total",c(totmean=mean(.som),totsd=sd(.som)))
   .som <-c(totmean=mean(.som),totsd=sd(.som))
   .res <- round(rbind(total=.som,internet=.int[,2:3],telephone=.tel[,2:3]),2)
-  .fin <- for (i in 1:5) {
+  for (i in 1:5) {
     resint<- paste0(.res[i,1]," (",.res[i,2],")")
     if (i==1) res <- resint else res <- rbind (res, resint)
   }
@@ -209,8 +209,10 @@ DesAssurance <- function(duree) {
     .int <-table (.d)
     .d <- f %>% filter (Duree>=duree)  %>% group_by(repondant) %>%  select(socio8)
     .tel <-table (.d)
+    
     .d<-unlist(c(d %>% filter (Duree>=duree ) %>% select(socio8),f %>% filter (Duree>=duree ) %>% select(socio8)))
     .som <-table (.d)
+    
     .fin <- as.vector(rbind(.som,.int[c(2,1),],.tel[c(2,1),])[,i])
     .int <- prop.table(.int,1)
     .tel <- prop.table(.tel,1)
