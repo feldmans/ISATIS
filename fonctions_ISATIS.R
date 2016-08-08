@@ -53,20 +53,30 @@ decode_answer_prof <- function(answer_prof) as.numeric (substr (answer_prof, 1, 
 #Effectifs 
 DesN2 <- function (duree) {
   .d <- d %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(n=n())
-  .grp <- .d$n
-  .tot <- sum (.grp)
-  .grp <- c (Total=.tot, Responders_int=.grp[2], Nonresponders_int=.grp[1])
-  .int <- .grp
-    .d <- f %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(n=n())
-  .grp <- .d$n
-  .tot <- sum (.grp)
-  .grp <- c (Total=.tot, Responders_tel=.grp[2], Nonresponders_tel=.grp[1])
-  .tel <- .grp
-  .all <- .int + .tel
-  .res <- t(data.frame(c(.all[1],.int[2:3],.tel[2:3])))
-  row.names(.res)<-NULL
-  .res <- rbind (colnames(.res),paste("N=",c(.all[1],.int[2:3],.tel[2:3])))
-  return (.res)
+  #.grp <- .d$n
+  #.tot <- sum (.grp)
+  #.int <- c (Total=.tot, Responders_int=.grp[2], Nonresponders_int=.grp[1])
+  .int <- data.frame(rbind(.d[2,],.d[1,]))
+  
+  .d <- f %>% filter (Duree>=duree) %>% group_by(repondant) %>% summarise(n=n())
+  #.grp <- .d$n
+  #.tot <- sum (.grp)
+  #.tel <- c (Total=.tot, Responders_tel=.grp[2], Nonresponders_tel=.grp[1])
+  .tel <- data.frame(rbind(.d[2,],.d[1,]))
+  
+  .som <- sum(d %>% filter (Duree>=duree) %>% summarise(n=n()),f %>% filter (Duree>=duree) %>% summarise(n=n()))
+  .som <- data.frame(repondant="total", n=.som) 
+  #.all <- .int + .tel
+  #.res <- t(data.frame(c(.all[1],.int[2:3],.tel[2:3])))
+  .res <- rbind(total=.som,internet=.int,telephone=.tel)[,2]
+  res <- data.frame(.res)
+  #row.names(.res)<-NULL
+  #.res <- rbind (colnames(.res),paste("N=",c(.all[1],.int[2:3],.tel[2:3])))
+  
+  rownames(res)<-c("total","rep_int","nonrep_int","rep_tel","nonrep_tel")
+  colnames(res)<- "Effectif"
+  #return (.res)
+  return (t(res))
 }
 
 #Age 
