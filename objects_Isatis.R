@@ -21,12 +21,10 @@ g <- read.xlsx(filenametelephone, sheetName="patients_telephone_150202_0955.")
 f <- g[g$Groupe%in%"T",]
 rm(g)
 
-
+####################################################################
 #VARIABLES INTERNET
 
 d$nitems <- rowSums(!is.na(d[,paste0("ISatis_Q",1:32)])) ;table(d$nitems)
-# bckd<- d
-# d<- d[d$nitems==0 | d$nitems>=15, ]  
 
 a <- as.Date(d$Date_Entree, format = "%j/%m/%y")
 b<- as.Date(d$Date_Sortie, format = "%j/%m/%y");
@@ -56,36 +54,26 @@ vI3 <- d[ ,paste0("val.decQ",c(3,5,6,17,20))]
 vI4 <- d[ ,paste0("val.decQ",c(7:11))]
 vI5 <- d[ ,paste0("val.decQ",c(21:24))]
 vI6 <- d[ ,paste0("val.decQ",c(25,26))]
-# vI1 <- d[d$nitems>=15 ,paste0("val.decQ",c(1,2,4,13:15))]
-# vI2 <- d[d$nitems>=15 ,paste0("val.decQ",c(16,18,27:30))]
-# vI3 <- d[d$nitems>=15 ,paste0("val.decQ",c(3,5,6,17,20))]
-# vI4 <- d[d$nitems>=15 ,paste0("val.decQ",c(7:11))]
-# vI5 <- d[d$nitems>=15 ,paste0("val.decQ",c(21:24))]
-# vI6 <- d[d$nitems>=15 ,paste0("val.decQ",c(25,26))]
 
 for (x in 1:6) assign (paste0 ("nb.quest", x), rowSums(!is.na(get(paste0("vI",x))))) #On ne peut créer plusieurs pbjets qu'avec une boucle
-#idem  avec sapply : on ne peut créer que des colonnes avec sapply :
-#d[ ,paste0("nb.quest", 1:6)] <-   sapply(1:6, function(x) rowSums(!is.na(get(paste0("vI",x)))))
 
 #THEME CALCULE UNIQUEMENT SI DUREE >=2, ET SI PLUS DE 15 QUESTIONS REPONDUES
+#Un patient avec que des NA pour res.theme est soit un HDJ soit un non repondant (moins de 16 questions repondues)
 d[ ,paste0("theme.valid", 1:4)] <- sapply (1:4, function (x) ifelse(get(paste0("nb.quest",x))>=3 & d$Duree>=2 & d$repondant %in% "oui", "valide", "non"))
 d[ ,paste0("theme.valid", 5:6)] <- sapply (5:6, function (x) ifelse(get(paste0("nb.quest",x))>=2 & d$Duree>=2 & d$repondant %in% "oui", "valide", "non"))
-# d[ ,paste0("theme.valid", 1:4)] <- sapply (1:4, function (x) ifelse(get(paste0("nb.quest",x))>=3 & d$Duree>=2, "valide", "non"))
-# d[ ,paste0("theme.valid", 5:6)] <- sapply (5:6, function (x) ifelse(get(paste0("nb.quest",x))>=2 & d$Duree>=2, "valide", "non"))
 
 d[ ,paste0("res.theme", 1:6)] <- sapply (1:6, function(x)ifelse( d[,paste0("theme.valid",x)]%in%"valide",rowMeans(get(paste0("vI",x)),na.rm=TRUE),NA))
 vItot <- d[,paste0("res.theme", 1:6)]
 
-#Un patient avec que des NA est soit un HDJ soit jamais le bon nombre de questions repondues
+
 d$score.valid <- ifelse(d$theme.valid1%in%"valide" & d$theme.valid2%in%"valide" & d$theme.valid3%in%"valide"
                         & d$theme.valid4%in%"valide" & d$theme.valid5%in%"valide" & d$theme.valid6%in%"valide","valide","non")
 d$res.score.final<- ifelse (d$score.valid%in%"valide",rowMeans(d[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))],na.rm=T),NA )
 
 
+####################################################################################
 #VARIABLES TELEPHONE
 f$nitems <- rowSums(!is.na(f[,paste0("ISatis_Q",1:32)]))
-#bckf<- f
-#f<- f[f$nitems==0 | f$nitems>=15, ] 
 
 a.tel <- as.Date(f$Date_Entree, format = "%j/%m/%y")
 b.tel<- as.Date(f$Date_Sortie, format = "%j/%m/%y")
@@ -114,18 +102,9 @@ vT4 <- f[ ,paste0("val.decQ",c(7:11))]
 vT5 <- f[ ,paste0("val.decQ",c(21:24))]
 vT6 <- f[,paste0("val.decQ",c(25,26))]
 
-# vT1 <- f[f$nitems>=15 ,paste0("val.decQ",c(1,2,4,13:15))]
-# vT2 <- f[f$nitems>=15 ,paste0("val.decQ",c(16,18,27:30))]
-# vT3 <- f[f$nitems>=15,paste0("val.decQ",c(3,5,6,17,20))]
-# vT4 <- f[f$nitems>=15 ,paste0("val.decQ",c(7:11))]
-# vT5 <- f[f$nitems>=15 ,paste0("val.decQ",c(21:24))]
-# vT6 <- f[f$nitems>=15 ,paste0("val.decQ",c(25,26))]
-
 for (x in 1:6) assign (paste0 ("nb.quest.tel", x), rowSums(!is.na(get(paste0("vT",x))))) 
 
 #THEME CALCULE UNIQUEMENT SI DUREE >=2, ET SI PLUS DE 15 QUESTIONS REPONDUES
-# f[f$nitems>=15 ,paste0("theme.valid", 1:4)] <- sapply (1:4, function (x) ifelse(get(paste0("nb.quest.tel",x))>=3 & f[f$nitems>=15,"Duree"]>=2 & f[f$nitems>=15,"repondant"]%in% "oui", "valide", "non"))
-# f[f$nitems>=15 ,paste0("theme.valid", 5:6)] <- sapply (5:6, function (x) ifelse(get(paste0("nb.quest.tel",x))>=2 & f[f$nitems>=15,"Duree"]>=2 & f[f$nitems>=15,"repondant"]%in% "oui", "valide", "non"))
 f[ ,paste0("theme.valid", 1:4)] <- sapply (1:4, function (x) ifelse(get(paste0("nb.quest.tel",x))>=3 & f$Duree>=2 & f$repondant %in% "oui", "valide", "non"))
 f[ ,paste0("theme.valid", 5:6)] <- sapply (5:6, function (x) ifelse(get(paste0("nb.quest.tel",x))>=2 & f$Duree>=2 & f$repondant %in% "oui", "valide", "non"))
 f[ ,paste0("res.theme", 1:6)] <- sapply (1:6, function(x)ifelse( f[,paste0("theme.valid",x)]%in%"valide",rowMeans(get(paste0("vT",x)),na.rm=TRUE),NA))
@@ -135,6 +114,7 @@ f$score.valid <- rowSums (f[ ,paste0("theme.valid", 1:6)] == "valide") == 6 #TRU
 f$res.score.final<- ifelse (f$score.valid,rowMeans(f[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))],na.rm=T),NA )
 
 
+#############################################################################
 #VARIABLES SOCIOLOGIQUES
 
 #INTERNET
