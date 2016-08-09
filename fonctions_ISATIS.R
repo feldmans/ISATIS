@@ -11,7 +11,6 @@ library(RMySQL)
 library(DBI)
 library(ggplot2)
 library(Hmisc)
-library(plyr) #rbind.fill
 library(gtools) #smartbind
 library(psy)
 library (dplyr)
