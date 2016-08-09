@@ -69,18 +69,83 @@ chisq.test(matrix(c(154,238,344,45),2))
 afs<-fisher.test(rbind(table(d[d$Duree>=2,"repondant"]),table(f[f$Duree>=2,"repondant"]))) 
 
 #temps entre sortie et ISATIS
-
 del_int <- d %>% filter (Duree>=2 & repondant %in% "oui")
 del_int <- as.numeric(del_int$Isatis_Date2 - del_int$Date_Sortie2)
 quart_int <- summary(del_int) ;quart_int
+#
 del_tel <- f %>% filter (Duree>=2 & repondant %in% "oui")
 del_tel <- as.numeric(del_tel$Isatis_Date2 - del_tel$Date_Sortie2)
 quart_tel <- summary(del_tel) ;quart_tel
-
+#
 wilcox.test(del_int,del_tel)
 
+#pour vérifier si NA pour temps entre sortie et ISATIS et savoir identité
 .DF <-data.frame(date=as.numeric(d$Isatis_Date2-d$Date_Sortie2), critere= d$Duree>=2 & d$nitems>=15, index = d$id)
 .DF%>% filter(is.na(date) & critere==TRUE) %>% select (index)
+
+
+#DESCRIPTION DES MISSING DATA/ NON CONCERNE
+
+listeQ<-c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25,26) #Questions dans l'ordre des themes
+listtheme<-rep(c(1,2,3,4,5,6), c(6,6,5,5,4,2)) #numero de theme repete x fois: x étant le nombre de questions qu'il contient
+
+#colonne decQ_class qui recode en ok, non conerne ou missing
+for(i in 1:32) d[ ,paste0("decQ_class",i)] <- recode(d[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
+for(i in 1:32) f[ ,paste0("decQ_class",i)] <- recode(f[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
+
+#tableaux qui donne pour chaque patient son id, son groupe, le resultat pour chaque question (ok, NC ou na)
+#J'inclus dans le tableau tous les patients restés 2 nuits ou plus, repondants et non repondants
+d_pat <-d[d$Duree>=2 ,c("id","groupe",paste0("decQ_class",listeQ))] #met les colonnes decQ_classe dans l'ordre de listeQ
+f_pat <-f[f$Duree>=2 ,c("id","groupe",paste0("decQ_class",listeQ))]
+
+names(d_pat)[c(-1,-2)]<-paste0("Q",listeQ,"_theme",listtheme)
+names(f_pat)[c(-1,-2)]<-paste0("Q",listeQ,"_theme",listtheme)
+
+ITpat<-rbind(d_pat,f_pat)
+
+# listtheme<-rep(c("id","groupe",1,2,3,4,5,6), c(1,1,6,6,5,5,4,2))
+# names(d_pat)[c(-1,-2)]<-paste0("Q",substr(names(d_pat),11,length(names(d_pat))),"_theme",listtheme)[c(-1,-2)]
+
+#J'ajoute les question 12 et 19 au tableau ITpat
+ITpat$decQ12<- c(d[d$Duree>=2,"decQ12"],f[f$Duree>=2,"decQ12"]) ; names(ITpat)[names(ITpat) == 'decQ12'] <- 'Q12'
+ITpat$decQ19<- c(d[d$Duree>=2,"decQ19"],f[f$Duree>=2,"decQ19"]) ; names(ITpat)[names(ITpat) == 'decQ19'] <- 'Q19'
+#changer ordre des colonnes (mettre 12 et 19 avant 13 et 20):
+ITpat<-ITpat[,c(1:5,31,6:18,32,19:30)]
+
+#rajouter les colonnes resultat theme et resultat global
+for(i in 1:6) ITpat[ ,paste0("result_theme",i)] <- c(d[d$Duree>=2,paste0("res.theme",i)],f[f$Duree>=2,paste0("res.theme",i)])
+ITpat$global_score<-c(d[d$Duree>=2,"res.score.final"],f[f$Duree>=2,"res.score.final"])
+
+write.xlsx(ITpat, file=paste(getwd(), "/patientflow20162107.xlsx", sep=""), sheetName="Sheet1",
+           col.names=TRUE, row.names=F, append=FALSE, showNA=F)
+
+#COMPTE DSE NA OK ET NC
+
+# count_NA<- function (x){
+#   .row<-x
+#   .row_count<-ifelse(is.na(.row),1,0)
+#   sumNA<-rowSums(.row_count)
+#   return(sumNA)
+# }
+# count_ok<- function (x){
+#      .row<-x
+#     .row_count<-ifelse(.row=="ok",1,0)
+#      sumok<-rowSums(.row_count,na.rm=T)
+#      return(sumok)
+# }
+# count_NC<-function (x){
+#   .row<-x
+#   .row_count<-ifelse(.row=="nonconc",1,0)
+#   sumok<-rowSums(.row_count,na.rm=T)
+#   return(sumok)
+# }
+# 
+# ITpat$sumNA<-sapply(1:nrow(ITpat),function (x)count_NA(ITpat[x,]))
+# ITpat$sumok<-sapply(1:nrow(ITpat),function (x)count_ok(ITpat[x,]))
+# ITpat$sumNC<-sapply(1:nrow(ITpat),function (x)count_NC(ITpat[x,]))
+
+
+
 
 
 
@@ -267,64 +332,6 @@ class_fun <- function (.dat){
 }
 
 class_fun(d)
-
-
-#SUIVI DES PATIENTS : MISSING/NON CONCERNE/OK
-
-listeQ<-c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25,26)
-listtheme<-rep(c("id","groupe",1,2,3,4,5,6), c(1,1,6,6,5,5,4,2))
-
-for(i in 1:32) d[ ,paste0("decQ_class",i)] <- recode(d[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
-d_pat <-d[d$Duree>=2 ,c("id","groupe",paste0("decQ_class",listeQ))]
-names(d_pat)[c(-1,-2)]<-paste0("Q",substr(names(d_pat),11,length(names(d_pat))),"_theme",listtheme)[c(-1,-2)]
-
-for(i in 1:32) f[ ,paste0("decQ_class",i)] <- recode(f[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
-f_pat <-f[f$Duree>=2 ,c("id","groupe",paste0("decQ_class",listeQ))]
-names(f_pat)[c(-1,-2)]<-paste0("Q",substr(names(f_pat),11,length(names(f_pat))),"_theme",listtheme)[c(-1,-2)]
-
-ITpat<-rbind(d_pat,f_pat)
-ITpat$decQ12<- c(d[d$Duree>=2,"decQ12"],f[f$Duree>=2,"decQ12"]) ; names(ITpat)[names(ITpat) == 'decQ12'] <- 'Q12'
-ITpat$decQ19<- c(d[d$Duree>=2,"decQ19"],f[f$Duree>=2,"decQ19"]) ; names(ITpat)[names(ITpat) == 'decQ19'] <- 'Q19'
-
-#changer ordre des colonnes (mettre 12 et 19 avant 13 et 20):
-ITpat<-ITpat[,c(1:5,31,6:18,32,19:30)]
-
-#rajouter les colonnes resultat
-for(i in 1:6) ITpat[ ,paste0("result_theme",i)] <- c(d[d$Duree>=2,paste0("res.theme",i)],f[f$Duree>=2,paste0("res.theme",i)])
-#ITpat[ ,paste0("result_themebis",1:6)]<- sapply(1:6,function(i)c(d[d$Duree>=2,paste0("res.theme",i)],f[f$Duree>=2,paste0("res.theme",i)]))
-ITpat$global_score<-c(d[d$Duree>=2,"res.score.final"],f[f$Duree>=2,"res.score.final"])
-
-write.xlsx(ITpat, file=paste(getwd(), "/patientflow20162107.xlsx", sep=""), sheetName="Sheet1",
-           col.names=TRUE, row.names=F, append=FALSE, showNA=F)
-
-#Legende des reponses aux questions 12 et 19 
-table(ITpat$Q12) # 1: concerne 2: non concerne, sauter question 13, 10: ne souhaite pas repondre
-table(ITpat$Q19) # 1: concerne 2: non concerne, sauter question 20, 10: ne souhaite pas repondre
-
-#COMPTE DSE NA OK ET NC
-
-# count_NA<- function (x){
-#   .row<-x
-#   .row_count<-ifelse(is.na(.row),1,0)
-#   sumNA<-rowSums(.row_count)
-#   return(sumNA)
-# }
-# count_ok<- function (x){
-#      .row<-x
-#     .row_count<-ifelse(.row=="ok",1,0)
-#      sumok<-rowSums(.row_count,na.rm=T)
-#      return(sumok)
-# }
-# count_NC<-function (x){
-#   .row<-x
-#   .row_count<-ifelse(.row=="nonconc",1,0)
-#   sumok<-rowSums(.row_count,na.rm=T)
-#   return(sumok)
-# }
-# 
-# ITpat$sumNA<-sapply(1:nrow(ITpat),function (x)count_NA(ITpat[x,]))
-# ITpat$sumok<-sapply(1:nrow(ITpat),function (x)count_ok(ITpat[x,]))
-# ITpat$sumNC<-sapply(1:nrow(ITpat),function (x)count_NC(ITpat[x,]))
 
 
 
