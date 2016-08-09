@@ -95,11 +95,11 @@ for(i in 1:32) f[ ,paste0("decQ_class",i)] <- recode(f[ ,paste0("decQ",i)],"1:5=
 
 #tableaux qui donne pour chaque patient son id, son groupe, le resultat pour chaque question (ok, NC ou na)
 #J'inclus dans le tableau tous les patients restés 2 nuits ou plus, repondants et non repondants
-d_pat <-d[d$Duree>=2 ,c("id","groupe",paste0("decQ_class",listeQ))] #met les colonnes decQ_classe dans l'ordre de listeQ
-f_pat <-f[f$Duree>=2 ,c("id","groupe",paste0("decQ_class",listeQ))]
+d_pat <-d[d$Duree>=2 ,c("id","groupe","repondant",paste0("decQ_class",listeQ))] #met les colonnes decQ_classe dans l'ordre de listeQ
+f_pat <-f[f$Duree>=2 ,c("id","groupe","repondant",paste0("decQ_class",listeQ))]
 
-names(d_pat)[c(-1,-2)]<-paste0("Q",listeQ,"_theme",listtheme)
-names(f_pat)[c(-1,-2)]<-paste0("Q",listeQ,"_theme",listtheme)
+names(d_pat)[c(-1,-2,-3)]<-paste0("Q",listeQ,"_theme",listtheme)
+names(f_pat)[c(-1,-2,-3)]<-paste0("Q",listeQ,"_theme",listtheme)
 
 ITpat<-rbind(d_pat,f_pat)
 
@@ -110,7 +110,7 @@ ITpat<-rbind(d_pat,f_pat)
 ITpat$decQ12<- c(d[d$Duree>=2,"decQ12"],f[f$Duree>=2,"decQ12"]) ; names(ITpat)[names(ITpat) == 'decQ12'] <- 'Q12'
 ITpat$decQ19<- c(d[d$Duree>=2,"decQ19"],f[f$Duree>=2,"decQ19"]) ; names(ITpat)[names(ITpat) == 'decQ19'] <- 'Q19'
 #changer ordre des colonnes (mettre 12 et 19 avant 13 et 20):
-ITpat<-ITpat[,c(1:5,31,6:18,32,19:30)]
+ITpat<-ITpat[,c(1:6,32,7:19,33,20:31)]
 
 #rajouter les colonnes resultat theme et resultat global
 for(i in 1:6) ITpat[ ,paste0("result_theme",i)] <- c(d[d$Duree>=2,paste0("res.theme",i)],f[f$Duree>=2,paste0("res.theme",i)])
@@ -119,33 +119,37 @@ ITpat$global_score<-c(d[d$Duree>=2,"res.score.final"],f[f$Duree>=2,"res.score.fi
 write.xlsx(ITpat, file=paste(getwd(), "/patientflow20162107.xlsx", sep=""), sheetName="Sheet1",
            col.names=TRUE, row.names=F, append=FALSE, showNA=F)
 
-#COMPTE DSE NA OK ET NC
 
-# count_NA<- function (x){
-#   .row<-x
-#   .row_count<-ifelse(is.na(.row),1,0)
-#   sumNA<-rowSums(.row_count)
-#   return(sumNA)
-# }
-# count_ok<- function (x){
-#      .row<-x
-#     .row_count<-ifelse(.row=="ok",1,0)
-#      sumok<-rowSums(.row_count,na.rm=T)
-#      return(sumok)
-# }
-# count_NC<-function (x){
-#   .row<-x
-#   .row_count<-ifelse(.row=="nonconc",1,0)
-#   sumok<-rowSums(.row_count,na.rm=T)
-#   return(sumok)
-# }
-# 
-# ITpat$sumNA<-sapply(1:nrow(ITpat),function (x)count_NA(ITpat[x,]))
-# ITpat$sumok<-sapply(1:nrow(ITpat),function (x)count_ok(ITpat[x,]))
-# ITpat$sumNC<-sapply(1:nrow(ITpat),function (x)count_NC(ITpat[x,]))
+#COMPTE DSE NA OK ET NC : attention ne correspond pas à ce qui est dans le manuscrit : recuperer scirpt de gilles!!
+
+count_NA<- function (x){
+  .row<-x
+  .row_count<-ifelse(is.na(.row),1,0)
+  sumNA<-rowSums(.row_count)
+  return(sumNA)
+}
+count_ok<- function (x){
+     .row<-x
+    .row_count<-ifelse(.row=="ok",1,0)
+     sumok<-rowSums(.row_count,na.rm=T)
+     return(sumok)
+}
+count_NC<-function (x){
+  .row<-x
+  .row_count<-ifelse(.row=="nonconc",1,0)
+  sumok<-rowSums(.row_count,na.rm=T)
+  return(sumok)
+}
+
+ITpat$sumNA<-sapply(1:nrow(ITpat),function (x)count_NA(ITpat[x,]))
+ITpat$sumok<-sapply(1:nrow(ITpat),function (x)count_ok(ITpat[x,]))
+ITpat$sumNC<-sapply(1:nrow(ITpat),function (x)count_NC(ITpat[x,]))
 
 
-
+#Calcul du nombre de non concernés parmis les repondants : ??
+count_rep<-ITpat%>% filter (repondant=="oui" & groupe=="int") %>% select(one_of(paste0("Q",listeQ,"_theme",listtheme)))
+count_rep<-ITpat%>% filter (repondant=="oui" & groupe=="int") 
+count_rep %>% filter (sumNC==0)
 
 
 
