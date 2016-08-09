@@ -391,12 +391,9 @@ write.table(print(tabdistribT),file="clipboard",sep="\t",dec=".",row.names=FALSE
 
 
 
-#AUTRES TESTS POUR ARTICLE
-
-
-#moyenne du nb de nuits
-DesDureebis(2)
-#mais les variables sont-elles symetriques?
+#NB : moyenne ou mediane pour le nombre de nuit?
+DesDureebis(2) #Fonction pour avoir la moyenne du nombre de nuit
+#mais Duree n'est pas symétrique donc mediane plus appropriée
 summary(c(d[d$Duree>=2, "Duree"],f[f$Duree>=2, "Duree"]))
 hist(c(d[d$Duree>=2, "Duree"],f[f$Duree>=2, "Duree"]), breaks = c(1:20,138))
 ks.test(c(d[d$Duree>=2, "Duree"],f[f$Duree>=2, "Duree"]),"pnorm",mean=mean(c(d[d$Duree>=2, "Duree"],f[f$Duree>=2, "Duree"]),na.rm=T),sd= sd(c(d[d$Duree>=2, "Duree"],f[f$Duree>=2, "Duree"]),na.rm=T))
