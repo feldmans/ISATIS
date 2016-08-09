@@ -35,12 +35,52 @@ summary (d[d$Duree>=2 & d$repondant%in%"non", "socio1"])
 
 #verif des legendes du tableau (est-ce que resultat correspond bien a la legende) : prise de l'exemple repondant internet
 table (d[d$Duree>=2,"socio2"],d[d$Duree>=2, "repondant"]) #remplace socio pour chaque caracteristique et verif avec tableau du dessus
-table (d[d$Duree>=2,"socio3"],d[d$Duree>=2, "repondant"])
+table (d[d$Duree>=2,"socio3"],d[d$Duree>=2, "repondant"]) #Pour savoir à quoi correspondent les numéros, regarder object_isatis.R
 table (d[d$Duree>=2,"socio4"],d[d$Duree>=2, "repondant"])
 table (d[d$Duree>=2,"socio5"],d[d$Duree>=2, "repondant"])
 table (d[d$Duree>=2,"socio6"],d[d$Duree>=2, "repondant"])
 table (d[d$Duree>=2,"socio7"],d[d$Duree>=2, "repondant"])
 table (d[d$Duree>=2,"socio8"],d[d$Duree>=2, "repondant"])
+
+######### AUTRES RESULTATS SOCIO DANS RESULTS ######################
+
+# periode d'inclusion
+summary(d$Date_Inclusion)
+summary(f$Date_Inclusion)
+
+#ATTENTION : missing values pour baselines:
+table(d$socio3[d$Duree>=2],useNA = "a")
+table(d$socio5[d$Duree>=2],useNA = "a")
+table(f$socio3[f$Duree>=2],useNA = "a")
+
+d %>% filter(is.na(socio3) & Duree>=2) %>% select(id)
+f %>% filter(is.na(socio3) & Duree>=2) %>% select(id)
+d %>% filter(is.na(socio5) & Duree>=2) %>% select(id)
+
+#Median LOS
+summary(rbind(d %>% filter (Duree>=2) %>% select (Duree),f %>% filter (Duree>=2) %>% select (Duree)))
+
+# pourcentage de repondeurs
+table(d$Duree>=2, d$repondant); prop.table(table(d$Duree>=2, d$repondant),1)
+table(f$Duree>=2, f$repondant);prop.table(table(f$Duree>=2, f$repondant),1)
+
+#comparaison taux de reponse
+chisq.test(matrix(c(154,238,344,45),2))
+afs<-fisher.test(rbind(table(d[d$Duree>=2,"repondant"]),table(f[f$Duree>=2,"repondant"]))) 
+
+#temps entre sortie et ISATIS
+
+del_int <- d %>% filter (Duree>=2 & repondant %in% "oui")
+del_int <- as.numeric(del_int$Isatis_Date2 - del_int$Date_Sortie2)
+quart_int <- summary(del_int) ;quart_int
+del_tel <- f %>% filter (Duree>=2 & repondant %in% "oui")
+del_tel <- as.numeric(del_tel$Isatis_Date2 - del_tel$Date_Sortie2)
+quart_tel <- summary(del_tel) ;quart_tel
+
+wilcox.test(del_int,del_tel)
+
+.DF <-data.frame(date=as.numeric(d$Isatis_Date2-d$Date_Sortie2), critere= d$Duree>=2 & d$nitems>=15, index = d$id)
+.DF%>% filter(is.na(date) & critere==TRUE) %>% select (index)
 
 
 
@@ -68,6 +108,7 @@ r_nr <- data.frame (int=c(wx_i,st_i), tel=c(wx_t,st_t), it=c(s1it,dtit))
 r_nr <- cbind(num_col,myname_col,r_nr,name_test)
 colnames(r_nr)<-c("socio","variable","p_val rep/nrep int","p_val rep/nrep tel","comparaison rep i et t" ,"test")
 write.table(print(r_nr),file="clipboard",sep="\t",dec=".",row.names=FALSE)
+
 
 
 ######### CALCUL TABLE 2 : COEFFICIENTS DE CROHNBACH ############
@@ -134,6 +175,63 @@ write.table(print(tab.theme),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 
 ######### FIGURE 1 : study profile ############
+
+
+#nombre de patients
+#nombre total
+length(d$id)
+length (f$Groupe)
+#nombre de plus de 2 nuits
+table(d$Duree>=2)
+table(f$Duree>=2)
+#repondeurs par groupe
+prop.table(table(d$Duree>=2, d$repondant),1)
+prop.table(table(f$Duree>=2, f$repondant),1)
+#N par service
+#eligible
+table(d$Service) + table(f$Service)
+#par groupe
+table(d$Service)
+table(f$Service)
+#par responders et par groupe pour duree >=2 nuits
+.grpfc <- d %>% filter (Duree>=2) %>% filter(repondant =="oui") %>% group_by(Service) %>% summarise(n())
+colSums(.grpfc[,2]) #verif : la somme vaut bien le nb de responders internet
+.intfc <- as.numeric(unlist(.grpfc[2]))
+.grpfc <- f %>% filter (Duree>=2) %>% filter(repondant =="oui") %>% group_by(Service) %>% summarise(n())
+colSums(.grpfc[,2]) #verif : la somme vaut bien le nb de responders internet
+.telfc <- as.numeric(unlist(.grpfc[2]))
+.intfc+.telfc
+#type d'hospit
+.a<-table(d$Duree>=2, d$Type_Hospi)
+.b<-table(f$Duree>=2, f$Type_Hospi)
+.a+.b
+table(f[f$Duree>=2 & f$Type_Hospi=="HC","repondant"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HC","repondant"])
+table(f[f$Duree>=2 & f$Type_Hospi=="HDS","repondant"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HDS","repondant"])
+#nb d'item completes
+table(rowSums(!is.na(f[ f$Duree>=2 & f$Type_Hospi=="HC", paste0("ISatis_Q",1:32)])))
+table(rowSums(!is.na(d[ d$Duree>=2 & d$Type_Hospi=="HC", paste0("ISatis_Q",1:32)])))
+table(rowSums(!is.na(f[ f$Duree>=2 & f$Type_Hospi=="HDS", paste0("ISatis_Q",1:32)]))) + table(rowSums(!is.na(d[ d$Duree>=2 & d$Type_Hospi=="HDS", paste0("ISatis_Q",1:32)])))
+table(rowSums(!is.na(f[ f$Duree>=2, paste0("ISatis_Q",1:32)])))
+table(rowSums(!is.na(d[ d$Duree>=2, paste0("ISatis_Q",1:32)])))
+#nombre de patients par service selon type hospit (pour duree >= 2)
+HCtot <- data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HC","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HC" ,"Service"]))
+HCresp <- data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HC" & f$repondant=="oui","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HC" & d$repondant=="oui","Service"]))
+HDStot <-data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HDS","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HDS","Service"]))
+HDSresp <-data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HDS"& f$repondant=="oui","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HDS"& d$repondant=="oui","Service"]))
+serv.names<- c("Gastrointestinal surgery","Gastroentorology","Hepatology","Infectious diseases","internal medicine")
+
+resHC<-paste0(HCresp[,2]," ",serv.names,"(",round(HCresp[,2]/HCtot[,2]*100,1),"%, ",HCresp[,2],"/",HCtot[,2],")")
+cat(paste(resHC,collapse="\n"))
+resHDS <- paste0(HDSresp[,2]," ",serv.names,"(",round(HDSresp[,2]/HCtot[,2]*100,1),"%, ",HDSresp[,2],"/",HDStot[,2],")")
+cat(paste(resHDS,collapse="\n"))
+
+nrow(f[f$repondant=="oui" & f$Duree>=2 & f$Type_Hospi=="HC",])#equivalent a table(f$nonHDJ) et table(f$repondant,f$Duree>=2)
+
+nrow(d[d$repondant=="oui" & d$Duree>=2,]) #equivalent a table(d$nonHDJ) et table(d$repondant,d$Duree>=2)
+
+
+
+
 
 
 
@@ -245,63 +343,6 @@ f[rowSums(!is.na(f[,paste0("ISatis_Q",1:32)]))==11 & f$Duree>=2,"id"]
 f[f$id=="48154h",]
 
 
-#nombre de patients
-#nombre total
-length(d$id)
-length (f$Groupe)
-#nombre de plus de 2 nuits
-table(d$Duree>=2)
-table(f$Duree>=2)
-#repondeurs par groupe
-table(d$Duree>=2, d$repondant)
-table(f$Duree>=2, f$repondant)
-#N par service
-#eligible
-table(d$Service) + table(f$Service)
-#par groupe
-table(d$Service)
-table(f$Service)
-#par responders et par groupe pour duree >=2 nuits
-.grpfc <- d %>% filter (Duree>=2) %>% filter(repondant =="oui") %>% group_by(Service) %>% summarise(n())
-colSums(.grpfc[,2]) #verif : la somme vaut bien le nb de responders internet
-.intfc <- as.numeric(unlist(.grpfc[2]))
-.grpfc <- f %>% filter (Duree>=2) %>% filter(repondant =="oui") %>% group_by(Service) %>% summarise(n())
-colSums(.grpfc[,2]) #verif : la somme vaut bien le nb de responders internet
-.telfc <- as.numeric(unlist(.grpfc[2]))
-.intfc+.telfc
-#type d'hospit
-.a<-table(d$Duree>=2, d$Type_Hospi)
-.b<-table(f$Duree>=2, f$Type_Hospi)
-.a+.b
-table(f[f$Duree>=2 & f$Type_Hospi=="HC","repondant"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HC","repondant"])
-table(f[f$Duree>=2 & f$Type_Hospi=="HDS","repondant"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HDS","repondant"])
-#nb d'item completes
-table(rowSums(!is.na(f[ f$Duree>=2 & f$Type_Hospi=="HC", paste0("ISatis_Q",1:32)])))
-table(rowSums(!is.na(d[ d$Duree>=2 & d$Type_Hospi=="HC", paste0("ISatis_Q",1:32)])))
-table(rowSums(!is.na(f[ f$Duree>=2 & f$Type_Hospi=="HDS", paste0("ISatis_Q",1:32)]))) + table(rowSums(!is.na(d[ d$Duree>=2 & d$Type_Hospi=="HDS", paste0("ISatis_Q",1:32)])))
-table(rowSums(!is.na(f[ f$Duree>=2, paste0("ISatis_Q",1:32)])))
-table(rowSums(!is.na(d[ d$Duree>=2, paste0("ISatis_Q",1:32)])))
-#nombre de patients par service selon type hospit (pour duree >= 2)
-HCtot <- data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HC","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HC" ,"Service"]))
-HCresp <- data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HC" & f$repondant=="oui","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HC" & d$repondant=="oui","Service"]))
-HDStot <-data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HDS","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HDS","Service"]))
-HDSresp <-data.frame(table(f[f$Duree>=2 & f$Type_Hospi=="HDS"& f$repondant=="oui","Service"]) + table(d[d$Duree>=2 & d$Type_Hospi=="HDS"& d$repondant=="oui","Service"]))
-serv.names<- c("Gastrointestinal surgery","Gastroentorology","Hepatology","Infectious diseases","internal medicine")
-
-resHC<-paste0(HCresp[,2]," ",serv.names,"(",round(HCresp[,2]/HCtot[,2]*100,1),"%, ",HCresp[,2],"/",HCtot[,2],")")
-cat(paste(resHC,collapse="\n"))
-resHDS <- paste0(HDSresp[,2]," ",serv.names,"(",round(HDSresp[,2]/HCtot[,2]*100,1),"%, ",HDSresp[,2],"/",HDStot[,2],")")
-cat(paste(resHDS,collapse="\n"))
-
-nrow(f[f$repondant=="oui" & f$Duree>=2 & f$Type_Hospi=="HC",])#equivalent a table(f$nonHDJ) et table(f$repondant,f$Duree>=2)
-
-nrow(d[d$repondant=="oui" & d$Duree>=2,]) #equivalent a table(d$nonHDJ) et table(d$repondant,d$Duree>=2)
-
-
-
-
-
-
 
 
 
@@ -340,13 +381,7 @@ write.table(print(tabdistribT),file="clipboard",sep="\t",dec=".",row.names=FALSE
 
 
 #AUTRES TESTS POUR ARTICLE
-#comparaison taux de reponse
-chisq.test(matrix(c(154,237,344,43),2))
-afs<-fisher.test(rbind(table(d[d$Duree>=2,"repondant"]),table(f[f$Duree>=2,"repondant"]))) #faux! inclus a tort les questionnaires incomplets dans les nonresponders dans les 
 
-#date d'inclusion
-summary(d$Date_Inclusion)
-summary(f$Date_Inclusion)
 
 #moyenne du nb de nuits
 DesDureebis(2)
@@ -359,16 +394,6 @@ ks.test(c(d[d$Duree>=2, "Duree"],f[f$Duree>=2, "Duree"]),"pnorm",mean=mean(c(d[d
 table(.dd)
 #non symetrique donc j'exprime en median(IQR)
 
-#temps entre sortie et ISATIS
-,d$Duree>=2
-num.dur1 <-as.numeric(d$Isatis_Date2[d$Duree>=2 & d$nitems>=15]-d$Date_Sortie2[d$Duree>=2 & d$nitems>=15])
-.DF <-data.frame(date=as.numeric(d$Isatis_Date2-d$Date_Sortie2), critere= d$Duree>=2 & d$nitems>=15, index = d$id)
-.DF[.DF$date%in%0,"index"]
-num.dur2 <- as.numeric(f$Isatis_Date2[f$Duree>=2 & f$nitems>=15]-f$Date_Sortie2[f$Duree>=2 & f$nitems>=15])
-summary(num.dur1)
-table(num.dur2)
-summary(num.dur2)
-wilcox.test(num.dur1,num.dur2)
-summary(c(num.dur1,num.dur2))
+
 
 
