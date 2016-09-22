@@ -259,26 +259,49 @@ cronbach3.boot<- function(data,indices){
   return(cron)
 }
 
+# bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
+#   
+#   xI<-get(paste0("vI",x))
+#   xT<-get(paste0("vT",x))
+#   if(!is.na(as.numeric(x))){
+#   keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
+#   keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
+#   }
+#   else {
+#     keepI <- na.omit(xI)
+#     keepT <- na.omit(xT)
+#   }
+#   .df <- data.frame(
+#               group=rep(c("int","tel"),c(nrow(keepI),nrow(keepT))),
+#               items=rbind(keepI,keepT)
+#   )
+#   .res<-boot(data=.df,statistic = cronbach3.boot ,R=R)
+# }
 bootcron<- function (x , R)  {    #x = "1":6 ou x="tot"
-  
-  xI<-get(paste0("vI",x))
-  xT<-get(paste0("vT",x))
   if(!is.na(as.numeric(x))){
-  keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
-  keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
+    xI<-get(paste0("vI",x))
+    xT<-get(paste0("vT",x))
+    keepI <- xI[!is.na(d[,paste0("res.theme",x)]),] #Si le résultat du thème est NA, c'est que le thème n'est pas valide
+    keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
   }
   else {
-    keepI <- na.omit(xI)
-    keepT <- na.omit(xT)
+    xI <- d[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))]
+    xT <- f[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))]
+    keepI <- xI[d$score.valid,] #Je ne garde que les lignes qui sont considérées comme valide pour le calcul du score 
+    keepT <- xT[f$score.valid,]
   }
   .df <- data.frame(
-              group=rep(c("int","tel"),c(nrow(keepI),nrow(keepT))),
-              items=rbind(keepI,keepT)
+    group=rep(c("int","tel"),c(nrow(keepI),nrow(keepT))),
+    items=rbind(keepI,keepT)
   )
   .res<-boot(data=.df,statistic = cronbach3.boot ,R=R)
 }
+
+
+
 BootCronCi <- function(x,R)  {
   .bootres <- bootcron (x=x, R=R)
+  #browser()
   .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
   .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
   .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
@@ -296,6 +319,56 @@ BootCronCi <- function(x,R)  {
 }
 
 #pvalue : test de permutation:
+
+perm.cronbach <-function (x,N){
+  if(!is.na(as.numeric(x))){
+    xI<-get(paste0("vI",x))
+    xT<-get(paste0("vT",x))
+    keepI <- xI[!is.na(d[,paste0("res.theme",x)]),] #Si le résultat du thème est NA, c'est que le thème n'est pas valide
+    keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
+  }
+  else {
+    xI <- d[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))]
+    xT <- f[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))]
+    keepI <- xI[d$score.valid,] #Je ne garde que les lignes qui sont considérées comme valide pour le calcul du score 
+    keepT <- xT[f$score.valid,]
+  }
+  
+  .df <- data.frame(
+    group=rep(c("int","tel"),c(nrow(keepI),nrow(keepT))),
+    items=rbind(keepI,keepT)
+  )
+  
+  calc_cron <- function(.df){
+    cron<-by(.df[-1],.df$group,cronbach.no.omit)
+    cronI<- as.numeric(cron)[1]
+    cronT<- as.numeric(cron)[2]
+    diffcron <- abs(cronI - cronT)
+    return(diffcron)
+  }
+  
+  perm.test<- function(.df=.df){
+    mixgpe <- sample(.df$group,replace = FALSE)
+    .df$group <- mixgpe
+    diff<- calc_cron(.df)
+    return(diff)
+  }
+  
+  diff.obs <- calc_cron(.df)
+  many.samp<- replicate (N, perm.test(.df))
+  
+  p.val <- length(many.samp[many.samp>= diff.obs]) / length(many.samp)
+  hist(many.samp,main=paste0("Difference cronbach theme",x))
+  abline(v=diff.obs,lwd=2,col=2)
+  abline(v=quantile(many.samp,prob=0.95,type=3),col=8)
+  
+  #return(data.frame(ni=nrow(keepI),alphai=obs.cronI,nt=nrow(keepT),alphat=obs.cronT, diff_obs=diff.obs, p_value=p.val,nb_perm=N))
+  return(list(many.samp, 
+              data.frame(ni=nrow(keepI),alphai=obs.cronI,nt=nrow(keepT),
+                         alphat=obs.cronT, diff_obs=diff.obs, p_value=p.val,nb_perm=N)))
+}
+
+
 perm.cronbach.theme<- function (x,N){
   # x<-1
   # x<-"tot"
@@ -336,10 +409,15 @@ perm.cronbach.theme<- function (x,N){
   
 }
 perm.cronbach.fin<- function (N){  
-  xI<-vItot
-  xT<-vTtot
-  keepI <- xI[!is.na(d$res.score.final),]
-  keepT <- xT[!is.na(f$res.score.final),]
+  # xI<-vItot
+  # xT<-vTtot
+  # keepI <- xI[!is.na(d$res.score.final),]
+  # keepT <- xT[!is.na(f$res.score.final),]
+  xI <- d[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))]
+  xT <- f[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))]
+  keepI <- xI[d$score.valid,] #Je ne garde que les lignes qui sont considérées comme valide pour le calcul du score 
+  keepT <- xT[f$score.valid,]
+  
   keepIT <- rbind(keepI,keepT)
   obs.cronI<- cronbach(keepI)$alpha
   obs.cronT<- cronbach(keepT)$alpha
@@ -375,64 +453,64 @@ perm.cronbach.fin<- function (N){
 }
 
 #1 fonction perm cronbach pour tous les themes et score global (finalement pas utilisée, mais elle marche)
-perm.cronbach<- function (x,N){
-  # x<-1
-  # x<-"tot"
-  xI<-get(paste0("vI",x))
-  xT<-get(paste0("vT",x))
-  
-  #if (is.numeric(x)){   
-  if (!is.na(as.numeric(x))){
-    keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
-    keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
-    keepIT <- rbind(keepI,keepT)
-    obs.cronI<- cronbach3(keepI)
-    obs.cronT<- cronbach3(keepT)
-    diff.obs <- abs(obs.cronI - obs.cronT)
-    
-    .gpe <- rep(c("int","tel"),c(nrow(keepI),nrow(keepT)))
-    
-    perm.test<- function(keepIT=keepIT,.gpe=.gpe){
-      mixgpe <- sample(.gpe,replace = FALSE)
-      int <- keepIT[mixgpe=="int",]
-      tel <- keepIT[mixgpe=="tel",]
-      cri<-cronbach3(int)
-      crt<-cronbach3(tel)
-      abs(cri-crt)
-    }
-  }
-  
-  else {
-    keepI <- xI[!is.na(d$res.score.final),]
-    keepT <- xT[!is.na(f$res.score.final),]
-    keepIT <- rbind(keepI,keepT)
-    obs.cronI<- cronbach(keepI)$alpha
-    obs.cronT<- cronbach(keepT)$alpha
-    diff.obs <- abs(obs.cronI - obs.cronT)
-    
-    .gpe <- rep(c("int","tel"),c(nrow(keepI),nrow(keepT)))
-    
-    perm.test<- function(keepIT=keepIT,.gpe=.gpe){
-      mixgpe <- sample(.gpe,replace = FALSE)
-      int <- keepIT[mixgpe=="int",]
-      tel <- keepIT[mixgpe=="tel",]
-      cri<-cronbach(int)$alpha
-      crt<-cronbach(tel)$alpha
-      abs(cri-crt)
-    }
-  }
-  many.samp<- replicate (N, perm.test(keepIT,.gpe))
-  
-  p.val <- length(many.samp[many.samp>= diff.obs]) / length(many.samp)
-  
-  #quantile(x = many.samp,probs = 0.95)
-  hist(many.samp,main=paste0("Difference cronbach theme",x))
-  abline(v=diff.obs,lwd=2,col=2)
-  
-  #mean(abs(many.samp)>abs(diff.obs))??
-  
-  return(data.frame(ni=nrow(keepI),alphai=obs.cronI,nt=nrow(keepT),alphat=obs.cronT, diff_obs=diff.obs, p_value=p.val,nb_perm=N))
-} 
+# perm.cronbach<- function (x,N){
+#   # x<-1
+#   # x<-"tot"
+#   xI<-get(paste0("vI",x))
+#   xT<-get(paste0("vT",x))
+#   
+#   #if (is.numeric(x)){   
+#   if (!is.na(as.numeric(x))){
+#     keepI <- xI[!is.na(d[,paste0("res.theme",x)]),]
+#     keepT <- xT[!is.na(f[,paste0("res.theme",x)]),]
+#     keepIT <- rbind(keepI,keepT)
+#     obs.cronI<- cronbach3(keepI)
+#     obs.cronT<- cronbach3(keepT)
+#     diff.obs <- abs(obs.cronI - obs.cronT)
+#     
+#     .gpe <- rep(c("int","tel"),c(nrow(keepI),nrow(keepT)))
+#     
+#     perm.test<- function(keepIT=keepIT,.gpe=.gpe){
+#       mixgpe <- sample(.gpe,replace = FALSE)
+#       int <- keepIT[mixgpe=="int",]
+#       tel <- keepIT[mixgpe=="tel",]
+#       cri<-cronbach3(int)
+#       crt<-cronbach3(tel)
+#       abs(cri-crt)
+#     }
+#   }
+#   
+#   else {
+#     keepI <- xI[!is.na(d$res.score.final),]
+#     keepT <- xT[!is.na(f$res.score.final),]
+#     keepIT <- rbind(keepI,keepT)
+#     obs.cronI<- cronbach(keepI)$alpha
+#     obs.cronT<- cronbach(keepT)$alpha
+#     diff.obs <- abs(obs.cronI - obs.cronT)
+#     
+#     .gpe <- rep(c("int","tel"),c(nrow(keepI),nrow(keepT)))
+#     
+#     perm.test<- function(keepIT=keepIT,.gpe=.gpe){
+#       mixgpe <- sample(.gpe,replace = FALSE)
+#       int <- keepIT[mixgpe=="int",]
+#       tel <- keepIT[mixgpe=="tel",]
+#       cri<-cronbach(int)$alpha
+#       crt<-cronbach(tel)$alpha
+#       abs(cri-crt)
+#     }
+#   }
+#   many.samp<- replicate (N, perm.test(keepIT,.gpe))
+#   
+#   p.val <- length(many.samp[many.samp>= diff.obs]) / length(many.samp)
+#   
+#   #quantile(x = many.samp,probs = 0.95)
+#   hist(many.samp,main=paste0("Difference cronbach theme",x))
+#   abline(v=diff.obs,lwd=2,col=2)
+#   
+#   #mean(abs(many.samp)>abs(diff.obs))??
+#   
+#   return(data.frame(ni=nrow(keepI),alphai=obs.cronI,nt=nrow(keepT),alphat=obs.cronT, diff_obs=diff.obs, p_value=p.val,nb_perm=N))
+# } 
 
 
 ############CALCUL DES ESTIMATEURS ET IC PAR BOOTSTRAP#############
