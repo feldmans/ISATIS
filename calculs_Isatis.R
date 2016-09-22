@@ -71,13 +71,51 @@ afs<-fisher.test(rbind(table(d[d$Duree>=2,"repondant"]),table(f[f$Duree>=2,"repo
 #temps entre sortie et ISATIS
 del_int <- d %>% filter (Duree>=2 & repondant %in% "oui")
 del_int <- as.numeric(del_int$Isatis_Date2 - del_int$Date_Sortie2)
+hist(del_int,breaks = 40, main="internet : delay between release and ISATIS")
 quart_int <- summary(del_int) ;quart_int
+quantile(del_int) #3,6,15.75,115 (med=6)
 #
 del_tel <- f %>% filter (Duree>=2 & repondant %in% "oui")
 del_tel <- as.numeric(del_tel$Isatis_Date2 - del_tel$Date_Sortie2)
 quart_tel <- summary(del_tel) ;quart_tel
 #
 wilcox.test(del_int,del_tel)
+
+#Différence de satisfaction selon délai
+sat_del_gr1<-d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(res.theme1,na.rm=T),sd(res.theme1,na.rm=T))
+
+sat_del_gr2<-d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(res.theme2,na.rm=T),sd(res.theme2,na.rm=T))
+
+sat_del_gr3<-d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(res.theme3,na.rm=T),sd(res.theme3,na.rm=T))
+
+sat_del_gr4<-d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(res.theme4,na.rm=T),sd(res.theme4,na.rm=T))
+
+sat_del_gr5<-d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(res.theme5,na.rm=T),sd(res.theme5,na.rm=T))
+
+sat_del_gr6<-d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(res.theme6,na.rm=T),sd(res.theme6,na.rm=T))
+
+sat_tot <- d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(res.score.final,na.rm=T),sd(res.score.final,na.rm=T))
+for (i in 1:6){
+  #data.frame(t(sat_del_gr6))[2,]
+  .res <- round(cbind(get(paste0("sat_del_gr",i))[,2],get(paste0("sat_del_gr",i))[,3]),2)
+  .res<- paste0(.res[,1],"(",.res[,2],")")
+  .res <- data.frame(t(.res))
+  if(i==1) quant_sat<-.res else quant_sat <- rbind(quant_sat,.res)
+}
+.res <- round(cbind(sat_tot[,2],sat_tot[,3]),2)
+.res<- paste0(.res[,1],"(",.res[,2],")")
+.res <- data.frame(t(.res))
+quant_sat <- rbind(quant_sat,.res)
+rownames(quant_sat) <- c(paste0("mean(sd)_res.theme",1:6),"res.global")
+
+
+
+#ne marche pas:
+# for (i in 1:6){
+#   sat_del_gr<-d %>% filter(Duree>=2 & repondant %in% "oui") %>% group_by(quant_del) %>% summarise(mean(paste0("res.theme",i),na.rm=T))
+#   assign(paste0("sat_del_gr",i),sat_del_gr)
+# }
+
 
 #pour vérifier si NA pour temps entre sortie et ISATIS et savoir identité
 .DF <-data.frame(date=as.numeric(d$Isatis_Date2-d$Date_Sortie2), critere= d$Duree>=2 & d$nitems>=15, index = d$id)
