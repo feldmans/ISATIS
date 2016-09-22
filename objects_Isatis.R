@@ -66,10 +66,18 @@ d[ ,paste0("res.theme", 1:6)] <- sapply (1:6, function(x)ifelse( d[,paste0("them
 vItot <- d[,paste0("res.theme", 1:6)]
 
 
-d$score.valid <- ifelse(d$theme.valid1%in%"valide" & d$theme.valid2%in%"valide" & d$theme.valid3%in%"valide"
-                        & d$theme.valid4%in%"valide" & d$theme.valid5%in%"valide" & d$theme.valid6%in%"valide","valide","non")
-d$res.score.final<- ifelse (d$score.valid%in%"valide",rowMeans(d[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))],na.rm=T),NA )
+# d$score.valid <- ifelse(d$theme.valid1%in%"valide" & d$theme.valid2%in%"valide" & d$theme.valid3%in%"valide"
+#                         & d$theme.valid4%in%"valide" & d$theme.valid5%in%"valide" & d$theme.valid6%in%"valide","valide","non")
+# d$res.score.final<- ifelse (d$score.valid%in%"valide",rowMeans(d[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))],na.rm=T),NA )
+d$score.valid <- rowSums (d[ ,paste0("theme.valid", 1:6)] == "valide") == 6 #TRUE si aucune reponse non a "theme valide"
+d$res.score.final<- ifelse (d$score.valid,rowMeans(d[,paste0("val.decQ",c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25:26))],na.rm=T),NA )
 
+#découpage en quantile 
+d$quant_del <- NA
+d$quant_del <- ifelse(d$Isatis_Date2-d$Date_Sortie2<3,1, d$quant_del)
+d$quant_del <- ifelse(d$Isatis_Date2-d$Date_Sortie2 >= 3,2, d$quant_del)
+d$quant_del <- ifelse(d$Isatis_Date2-d$Date_Sortie2>=6,3, d$quant_del)
+d$quant_del <- ifelse(d$Isatis_Date2-d$Date_Sortie2 >= 15.75,4,d$quant_del)
 
 ####################################################################################
 #VARIABLES TELEPHONE
