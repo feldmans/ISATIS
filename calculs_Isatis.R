@@ -7,9 +7,9 @@
 
 
 #charger fonctions et librairies
-source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/fonctions ISATIS.R") 
+source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/fonctions_ISATIS.R") 
 #charger aussi les objects necessaires:
-source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/objects Isatis.R")
+source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/objects_Isatis.R")
 
 
 
@@ -227,29 +227,41 @@ crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000)))) #n
 
 #P VALUE CRONBACH : TEST DE PERMUTATION
 #1/GENERE les 10E6 permutations cronbach, calcul (ni,alphai,nt,alphat,diff,pval,n_perm), et enregistre les 10E6 perm ([[1]]) et (ni,alphai,nt,alphat,diff,pval,n_perm) [[2]]
+# set.seed(1234)
+# for (i in 1:6){
+#   res.perm<-perm.cronbach.theme(x=i,1000000) #le resultat est une liste :[[1]] 10E6 valeur de permutation [[2]]tableau de résultat
+#   saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))
+# }
+# res.perm<-perm.cronbach.fin(1000000)
+# saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
 set.seed(1234)
-for (i in 1:6){
-  res.perm<-perm.cronbach.theme(x=i,1000000) #le resultat est une liste :[[1]] 10E6 valeur de permutation [[2]]tableau de résultat
-  saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.theme",i,".Rdata"))
+for (i in c(1:6,"tot")){ #NB for "tot" : "NA's introduced by coercion" car as.numeric("tot")=NA
+  #res.perm<-perm.cronbach(x=i,100)
+  res.perm<-perm.cronbach(x=i,1000000)#le resultat est une liste :[[1]] 10E6 valeur de permutation [[2]]tableau de résultat
+  saveRDS(res.perm,file=paste0("test perm/perm10E6.pval.cronbach",i,".Rdata"))
 }
-res.perm<-perm.cronbach.fin(1000000)
-saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
 
 #2/lecture des Pvalue : assigne le tableau de cronbach a res.perm1:6 et res.permfin
-.set<-"C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/"
-for (i in 1:6){
-  assign((paste0("res.perm",i)),readRDS(paste0(.set,"perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
+#.set<-"C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/test perm/"
+# for (i in 1:6){
+#   assign((paste0("res.perm",i)),readRDS(paste0(.set,"perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
+# }
+# res.permfin<-readRDS(paste0(.set,"perm10E6.pval.cronbach.fin.Rdata"))[[2]]
+for (i in c(1:6,"tot")){
+  assign((paste0("res.perm",i)),readRDS(paste0(.set,"test perm/perm10E6.pval.cronbach",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
 }
-res.permfin<-readRDS(paste0(.set,"perm10E6.pval.cronbach.fin.Rdata"))[[2]]
-getwd()
 
 #3/crée un seul tableau cronbach avec ni,alphai,nt,alphat,diff,pval,n_perm (seul pval est utilisé dans le manuscrit)
-for (i in c(1:6,"fin")){
+# for (i in c(1:6,"fin")){
+#   tab<-get(paste0("res.perm",i))
+#   if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
+# }
+for (i in c(1:6,"tot")){
   tab<-get(paste0("res.perm",i))
   if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
 }
 
-write.table(print(tabcron),file="clipboard",sep="\t",dec=".",row.names=FALSE)
+write.table( print(tabcron),file="clipboard",sep="\t",dec=".",row.names=FALSE )
 
 
 

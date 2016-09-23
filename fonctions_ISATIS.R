@@ -321,6 +321,7 @@ BootCronCi <- function(x,R)  {
 #pvalue : test de permutation:
 
 perm.cronbach <-function (x,N){
+  
   if(!is.na(as.numeric(x))){
     xI<-get(paste0("vI",x))
     xT<-get(paste0("vT",x))
@@ -344,28 +345,29 @@ perm.cronbach <-function (x,N){
     cronI<- as.numeric(cron)[1]
     cronT<- as.numeric(cron)[2]
     diffcron <- abs(cronI - cronT)
-    return(diffcron)
+    return(c(cronI,cronT,diffcron))
   }
   
   perm.test<- function(.df=.df){
     mixgpe <- sample(.df$group,replace = FALSE)
     .df$group <- mixgpe
-    diff<- calc_cron(.df)
+    diff<- calc_cron(.df)[3] #la 3e valeur de calc_cron est la différence
     return(diff)
   }
   
-  diff.obs <- calc_cron(.df)
+  cron.obs <- calc_cron(.df)
+  diff.obs <- cron.obs[3]
   many.samp<- replicate (N, perm.test(.df))
   
-  p.val <- length(many.samp[many.samp>= diff.obs]) / length(many.samp)
+  p.val <- length(many.samp[many.samp>= diff.obs[3]]) / length(many.samp)
   hist(many.samp,main=paste0("Difference cronbach theme",x))
   abline(v=diff.obs,lwd=2,col=2)
   abline(v=quantile(many.samp,prob=0.95,type=3),col=8)
   
   #return(data.frame(ni=nrow(keepI),alphai=obs.cronI,nt=nrow(keepT),alphat=obs.cronT, diff_obs=diff.obs, p_value=p.val,nb_perm=N))
   return(list(many.samp, 
-              data.frame(ni=nrow(keepI),alphai=obs.cronI,nt=nrow(keepT),
-                         alphat=obs.cronT, diff_obs=diff.obs, p_value=p.val,nb_perm=N)))
+              data.frame(ni=nrow(keepI),alphai=cron.obs[1],nt=nrow(keepT),
+                         alphat=cron.obs[2], diff_obs=diff.obs, p_value=p.val,nb_perm=N)))
 }
 
 
