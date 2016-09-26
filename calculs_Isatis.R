@@ -224,6 +224,8 @@ write.table(print(r_nr),file="clipboard",sep="\t",dec=".",row.names=FALSE)
 
 set.seed(12345)
 crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000)))) #nb : les alpha sont calculés de la meme facon que dans le tableau du test de permutation ci dessous
+write.table(print(crontab),file="clipboard",sep="\t",dec=".",row.names=FALSE )
+#nb :warning si le nb de permutation est faible, "NA introduce" à cause de !is.na(as.numeric(x)), pas de csq sur le resultat
 
 #P VALUE CRONBACH : TEST DE PERMUTATION
 #1/GENERE les 10E6 permutations cronbach, calcul (ni,alphai,nt,alphat,diff,pval,n_perm), et enregistre les 10E6 perm ([[1]]) et (ni,alphai,nt,alphat,diff,pval,n_perm) [[2]]
@@ -234,15 +236,18 @@ crontab<- data.frame(t(sapply(c(1:6,"tot"), function(i)BootCronCi(i,20000)))) #n
 # }
 # res.perm<-perm.cronbach.fin(1000000)
 # saveRDS(res.perm,file=paste0("perm10E6.pval.cronbach.fin.Rdata"))
+.set<-"C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/"
 set.seed(1234)
-for (i in c(1:6,"tot")){ #NB for "tot" : "NA's introduced by coercion" car as.numeric("tot")=NA
-  #res.perm<-perm.cronbach(x=i,100)
+#i=1
+for (i in c(1:6,"tot")) {
+  #for (i in c(2,"tot")){#NB for "tot" : "NA's introduced by coercion" car as.numeric("tot")=NA
+  #res.perm<-perm.cronbach(x=i,1000)
   res.perm<-perm.cronbach(x=i,1000000)#le resultat est une liste :[[1]] 10E6 valeur de permutation [[2]]tableau de résultat
-  saveRDS(res.perm,file=paste0("test perm/perm10E6.pval.cronbach",i,".Rdata"))
+  saveRDS(res.perm,file=paste0(.set,"test perm/perm10E6.pval.cronbach",i,".Rdata"))
 }
 
 #2/lecture des Pvalue : assigne le tableau de cronbach a res.perm1:6 et res.permfin
-#.set<-"C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/test perm/"
+
 # for (i in 1:6){
 #   assign((paste0("res.perm",i)),readRDS(paste0(.set,"perm10E6.pval.cronbach.theme",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
 # }
@@ -251,16 +256,21 @@ for (i in c(1:6,"tot")){
   assign((paste0("res.perm",i)),readRDS(paste0(.set,"test perm/perm10E6.pval.cronbach",i,".Rdata"))[[2]]) # rappel :[[2]]= (ni,alphai,nt,alphat,diff,pval,n_perm)
 }
 
+
+
 #3/crée un seul tableau cronbach avec ni,alphai,nt,alphat,diff,pval,n_perm (seul pval est utilisé dans le manuscrit)
 # for (i in c(1:6,"fin")){
 #   tab<-get(paste0("res.perm",i))
 #   if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
 # }
+
+
 for (i in c(1:6,"tot")){
   tab<-get(paste0("res.perm",i))
   if (i == 1)tabcron<-tab else tabcron<-rbind(tabcron,tab)
 }
 
+tabcron<-cbind(crontab,tabcron$p_value)
 write.table( print(tabcron),file="clipboard",sep="\t",dec=".",row.names=FALSE )
 
 

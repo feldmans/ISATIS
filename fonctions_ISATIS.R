@@ -341,6 +341,7 @@ perm.cronbach <-function (x,N){
   )
   
   calc_cron <- function(.df){
+    #browser()
     cron<-by(.df[-1],.df$group,cronbach.no.omit)
     cronI<- as.numeric(cron)[1]
     cronT<- as.numeric(cron)[2]
@@ -357,9 +358,9 @@ perm.cronbach <-function (x,N){
   
   cron.obs <- calc_cron(.df)
   diff.obs <- cron.obs[3]
-  many.samp<- replicate (N, perm.test(.df))
+  many.samp <- replicate (N, perm.test(.df))
   
-  p.val <- length(many.samp[many.samp>= diff.obs[3]]) / length(many.samp)
+  p.val <- length(many.samp[many.samp>= diff.obs]) / length(many.samp)
   hist(many.samp,main=paste0("Difference cronbach theme",x))
   abline(v=diff.obs,lwd=2,col=2)
   abline(v=quantile(many.samp,prob=0.95,type=3),col=8)
