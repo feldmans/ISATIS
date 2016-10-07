@@ -834,30 +834,31 @@ ESfun <- function (.theme) {  #.dat=.df
 
 #calcul n, mean, sd, median interquartile
 
-calmean2IC.bootstrap<-function(thedata, nrep) {
+calIC.bootstrap<-function(thedata, nrep) {
   mymeans<-rep(NA,nrep);
   for (i in 1:nrep) {
     mymeans[i]<-mean(sample(x=thedata,size= length(thedata), replace = TRUE));
   }
-  meanIC<-quantile(mymeans, prob=c(0.5,0.025,0.975));
-  names(meanIC) <- c("mean", "2.5%", "97.5%")
+  IC <- quantile(mymeans, prob=c(0.025,0.975));
+  names(IC) <- c("2.5%", "97.5%")
   return(meanIC)
 }
 
 scoreestim <- function (x,myname=NULL) {
   x <- x[!is.na (x)]
-  n = length(x);
-  mymean<-calmean2IC.bootstrap(x,10000)
-  ab<-calsd.bootstrap(x,10000)
-  b<-median(x)
-  c<-quantile(x, probs = c(0.25, 0.75))
+  n <- length(x)
+  mymean <- mean(x)
+  myIC<-calIC.bootstrap(x,10000)
+  # ab<-calsd.bootstrap(x,10000)   #la fonction n'existe plus mais inutile de calculer sd (qui plus est par bootstrap) quand on a déjà IC.
+  #b<-median(x)
+  #c<-quantile(x, probs = c(0.25, 0.75))
   if (is.null (myname)) {
-    abc<-c(n,mymean,ab,b,c)
-    names(abc)<- c("n","mean","2.5%","97.5%","sd","median","q1","q3") 
+    abc<-c(n,mymean,myIC)
+    names(abc)<- c("n","mean","2.5%","97.5%") 
   } else {
     v<-myname
-    abc<-c(v,n,mymean,ab,b,c)
-    names(abc)<- c("result","n","mean","2.5%","97.5%","sd","median","q1","q3")  
+    abc<-c(v,n,mymean,myIC)
+    names(abc)<- c("result","n","mean","2.5%","97.5%")  
   }
   return(abc)
 }
