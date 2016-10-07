@@ -832,6 +832,81 @@ ESfun <- function (.theme) {  #.dat=.df
 
 ###############FONCTIONS POUR LES RAPPORTS PAR SERVICE####################
 
+#pour test:
+#.theme<-
+#.dat<-.df
+#.service<-"CHIRURGIE DIGESTIVE"
+
+fun.mean <- function(data,indices){
+  .dat <- data[indices,]
+  .dat <- na.omit (.dat)
+  #.int <- .dat[.dat$group=="int", "score"]
+  #.tel <- .dat[.dat$group=="tel", "score"]
+  mymean<-by(.dat$score,.dat$group,mean)
+  return(mymean)
+}
+
+fun.meantot <- function(data,indices){
+  .dat <- data[indices,]
+  .dat <- na.omit (.dat)
+  mymeantot <- mean(.dat$score)
+  return(mymeantot)
+}
+
+#Je cree la fonction boot. 
+#le tableau .df defini l'argument data de la fonction fun mean. 
+#boot repete la fonction fun.mean R fois : il genere un nouveau .df[indices,] et fait la moyenne. 
+boot.theme.rap <- function (.service,.theme,R){
+  .df <- data.frame (
+    score=c (d[d$service.recode==.service, .theme], f[f$service.recode==.service, .theme]),
+    group=c (rep ("int", nrow (d[d$service.recode==.service,])), rep ("tel", nrow (f[f$service.recode==.service,])))
+  )
+  .res <- boot(data=.df,statistic=fun.mean,R=R)
+  #meantot <- mean(.df$score, na.rm=T)
+  .restot <- boot(data=.df, statistic=fun.meantot,R=R)
+  #return(list(.res,meantot))
+  return(list(.res,.restot))
+}
+
+#Je cree une fonction BootMCi qui reintegre resultat de boot.theme et ajoute les IC et met en forme
+BootMCi.rap <- function (.service,.theme, R) {
+  #  browser()
+  .boottemp <- boot.theme.rap (.service=.service,.theme=.theme, R=R)
+  .bootres <-.boottemp[[1]]
+  .restot <-.boottemp[[2]]
+  ############
+  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  rownames (.res) <- names (.bootres$t0) #appelle les lignes int et tel mais ca sera perdu ensuite
+  colnames (.res) <- c ("CI_L", "CI_U")
+  #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
+  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
+  .res$n<-c(sum(!is.na(d[d$service.recode==.service,.theme])),sum(!is.na(f[f$service.recode==.service,.theme]))) #true(non manquant) vaut 1, donc nb de non NA
+  ###########
+  .n <- length (.restot$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.restot,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  .tot <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  rownames (.tot) <- "tot" #appelle les lignes int et tel mais ca sera perdu ensuite
+  colnames (.tot) <- c ("CI_L", "CI_U")
+  #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
+  .tot$est <- as.numeric (.restot$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
+  .tot$n<-sum(!is.na(d[d$service.recode==.service,.theme]))+ sum(!is.na(f[f$service.recode==.service,.theme])) #true(non manquant) vaut 1, donc nb de non NA
+  ############
+  .res <- rbind(.res,.tot)
+  .res <- .res[, c (4,3, 1, 2)] #remet les colonnes dans l'ordre
+  .ans <- round (.res, 2) #fait un arrondi sur chaque valeur
+  .ans <- data.frame (N=.res$n, meanCI=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
+  .ans <- sapply  (c (internet=.ans[1, ], telephone=.ans[2, ], total=.ans[3,]), as.vector )#c(int= , tel=)donne un titre, mais met en liste, 
+  #.ans <- c(service=.service,.ans) #pour avoir nom du service mais lourd
+  #sapply(as.vector) realigne en chaine de caracteres
+  return (.ans)
+}
+
+
+
+
+
 #calcul n, mean, sd, median interquartile
 
 calIC.bootstrap<-function(thedata, nrep) {
@@ -861,6 +936,31 @@ scoreestim <- function (x,myname=NULL) {
     names(abc)<- c("result","n","mean","2.5%","97.5%")  
   }
   return(abc)
+}
+
+#RESULTAT THEME SELON SERVICE
+fun.score <- function(service,data) {
+  #  browser()
+  theme <- data.frame (t (sapply (1:6, function (x) scoreestim (data[data$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  final <- data.frame(t(scoreestim(data[data$service.recode==service,"res.score.final"],"score final")))
+  output <- rbind(theme,final)
+  #  write.table(print(output),file="clipboard",sep="\t",dec=",",row.names=FALSE) 
+  output
+}
+
+fun.score.IT <- function(service,data_int,data_tel) {
+  d <- data_int
+  f <- data_tel
+  tot <- rbind(d[d$service.recode==service , ],f[f$service.recode==service , ])
+  themei <- data.frame (t (sapply (1:6, function (x) scoreestim (d[d$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  finali <- data.frame(t(scoreestim(d[d$service.recode==service,"res.score.final"],"score final")))
+  themet <- data.frame (t (sapply (1:6, function (x) scoreestim (f[f$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  finalt <- data.frame(t(scoreestim(f[f$service.recode==service,"res.score.final"],"score final")))
+  themeit<- data.frame (t (sapply (1:6, function (x) scoreestim (tot[tot$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  finalit<- data.frame(t(scoreestim(tot[tot$service.recode==service,"res.score.final"],"score final")))
+  
+  output <- rbind(theme,final)
+  output
 }
 
 
@@ -940,15 +1040,6 @@ fun.socio5 <- function (service, data1, data2){
   return("OK")
 }
 
-#RESULTAT THEME SELON SERVICE
-fun.score <- function(service,data) {
-  #  browser()
-  theme <- data.frame (t (sapply (1:6, function (x) scoreestim (data[data$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
-  final <- data.frame(t(scoreestim(data[data$service.recode==service,"res.score.final"],"score final")))
-  output <- rbind(theme,final)
-  #  write.table(print(output),file="clipboard",sep="\t",dec=",",row.names=FALSE) 
-  output
-}
 
 
 
