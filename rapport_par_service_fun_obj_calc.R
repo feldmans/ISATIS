@@ -94,6 +94,57 @@ BootMCi.rap <- function (.service,.theme, R) {
   return (.ans)
 }
 
+#################calcul des scores de satisfaction et IC tous services confondus
+#Je cree la fonction boot. Les fonctions stat fun.mean et fun.meantot sont inchangées
+boot.theme.rap.tot <- function (.theme,R){
+  .df <- data.frame (
+    score=c (d[, .theme], f[, .theme]),
+    group=c (rep ("int", nrow (d)), rep ("tel", nrow (f)))
+  )
+  .res <- boot(data=.df,statistic=fun.mean,R=R)
+  #meantot <- mean(.df$score, na.rm=T)
+  .restot <- boot(data=.df, statistic=fun.meantot,R=R)
+  #return(list(.res,meantot))
+  return(list(.res,.restot))
+}
+
+#Je cree une fonction BootMCi qui reintegre resultat de boot.theme et ajoute les IC et met en forme
+BootMCi.rap.tot <- function (.theme, R) {
+  #  browser()
+  .boottemp <- boot.theme.rap.tot (.theme=.theme, R=R)
+  .bootres <-.boottemp[[1]]
+  .restot <-.boottemp[[2]]
+  
+  ############tableau pour int et tel séparé
+  .n <- length (.bootres$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.bootres,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  .res <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  rownames (.res) <- names (.bootres$t0) #appelle les lignes int et tel mais ca sera perdu ensuite
+  colnames (.res) <- c ("CI_L", "CI_U")
+  #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
+  .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
+  .res$n<-c(sum(!is.na(d[,.theme])),sum(!is.na(f[,.theme]))) #true(non manquant) vaut 1, donc nb de non NA
+  
+  ###########tableau pour int et tel confondus
+  .n <- length (.restot$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
+  .list.ci <- lapply(1:.n, function(x) boot.ci(.restot,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
+  .tot <- data.frame (t (sapply (.list.ci, function (x) x[["percent"]][4:5]))) #selectionne les valeur de IC
+  rownames (.tot) <- "tot" #appelle les lignes int et tel mais ca sera perdu ensuite
+  colnames (.tot) <- c ("CI_L", "CI_U")
+  #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
+  .tot$est <- as.numeric (.restot$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
+  .tot$n<-sum(!is.na(d[,.theme]))+ sum(!is.na(f[,.theme])) #true(non manquant) vaut 1, donc nb de non NA
+  
+  ############réunion des tableaux
+  .res <- rbind(.res,.tot)
+  .res <- .res[, c (4,3, 1, 2)] #remet les colonnes dans l'ordre
+  .ans <- round (.res, 2) #fait un arrondi sur chaque valeur
+  .ans <- data.frame (N=.res$n, meanCI=paste0 (.ans$est, " [", .ans$CI_L, "-", .ans$CI_U, "]")) #met en forme les valeurs
+  .ans <- sapply  (c (internet=.ans[1, ], telephone=.ans[2, ], total=.ans[3,]), as.vector )#c(int= , tel=)donne un titre, mais met en liste, 
+  #.ans <- c(service=.service,.ans) #pour avoir nom du service mais lourd
+  #sapply(as.vector) realigne en chaine de caracteres
+  return (.ans)
+}
 
 
 ############## CALCUL DES SCORES #################
@@ -103,15 +154,13 @@ BootMCi.rap <- function (.service,.theme, R) {
 #filenametelephone<-"/Users/gilles_travail/Documents/Travauxscientifiques/SarahFeldman_Isatis/patients_telephone_150202_0955_Isatis.xlsx"
 
 #si Sarah
-filenameinternet<-"/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/questionnaires ISATIS/patients_Internet_150202_0955_complet_Isatis.xlsx"
-filenametelephone<-"/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/questionnaires ISATIS/patients_telephone_150202_0955_Isatis_original.xlsx"
+#filenameinternet<-"/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/questionnaires ISATIS/patients_Internet_150202_0955_complet_Isatis.xlsx"
+#filenametelephone<-"/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/questionnaires ISATIS/patients_telephone_150202_0955_Isatis_original.xlsx"
 
-# d <- read.table (filenameinternet, header=T,sep=";",dec=".",na.strings=" ")
-# g <- read.table (filenametelephone, header=T,sep=";",dec=".",na.strings=" ")
-d <- read.xlsx (filenameinternet, sheetName="patients_internet_150202_0952.c")
-g <- read.xlsx(filenametelephone, sheetName="patients_telephone_150202_0955.")
-f <- g[g$Groupe%in%"T",]
-rm(g)
+# d <- read.xlsx (filenameinternet, sheetName="patients_internet_150202_0952.c")
+# g <- read.xlsx(filenametelephone, sheetName="patients_telephone_150202_0955.")
+# f <- g[g$Groupe%in%"T",]
+# rm(g)
 
 ####################################################################
 #VARIABLES INTERNET
@@ -222,10 +271,36 @@ f$res.score.final<- ifelse (f$score.valid,rowMeans(f[,paste0("val.decQ",c(1,2,4,
 #NB : pour que le sink "resultats_themes_tous_services.txt" marche, il faut mettre en silence le sink au sein de la boucle
 #Donc impression une page par service(avec sink dans la boucle) puis tous les services sur la même page (en retirant sink de la boucle)
 
-#une page par service
+######################################
+
+#CALCUL DES SCORES DE SATISFACTION
 set.seed(1234)
+
+#satisfaction tous services confondus: je rappellerai les objets crées dans la boucle (mais je ne les crées qu'une seule fois)
+MCi.rap.tot <- t(sapply(1:6,function(x)BootMCi.rap.tot (paste0("res.theme",x),2000)))
+MCi.rap.tot<- data.frame(rbind(MCi.rap.tot,BootMCi.rap.tot("res.score.final",2000)))
+dimnames<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+            "commodité de la chambre","restauration hospitalière","score global")
+int_tel.tot<-data.frame(dimnames,MCi.rap.tot[,1:4]); colnames(int_tel.tot) <-c("thème","int_N","int_Mean[95%CI]","tel_N","tel_Mean[95%CI]")
+tot.tot<-data.frame(dimnames,MCi.rap.tot[,5:6]); colnames(tot.tot) <-c("thème","N","Mean[95%CI]")
+
+for (.s in levels (d$service.recode)) {
+  MCi.rap <- t(sapply(1:6,function(x)BootMCi.rap (.s,paste0("res.theme",x),2000)))
+  MCi.rap<- data.frame(rbind(MCi.rap,BootMCi.rap(.s,"res.score.final",2000)))
+  
+  dimnames<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+              "commodité de la chambre","restauration hospitalière","score global")
+  int_tel<-data.frame(dimnames,MCi.rap[,1:4]); colnames(int_tel) <-c("thème","int_N","int_Mean[95%CI]","tel_N","tel_Mean[95%CI]")
+  assign(paste0("int_tel",.s),int_tel)
+  tot <- data.frame(dimnames,MCi.rap[,5:6]); colnames(tot) <-c("thème","N","Mean[95%CI]")
+  assign(paste0("tot",.s),tot)
+  write.xlsx (MCi.rap, file=paste0(.set,"ISATIS_",.s,".xlsx"), col.names=T,row.names=F, sheetName="resultats ISATIS", append=F)    
+}
+
+#RAPPORTS : une page par service
 for (.s in levels (d$service.recode)) {
   
+  #####calculs par service
   n2ni <- d %>% filter (Duree>=2) %>% filter(service.recode==.s) %>% summarise(n()) 
   nri <- d %>% filter (Duree>=2) %>% filter(repondant =="oui" & service.recode==.s) %>% summarise(n()) 
   Pri <- round(nri/n2ni *100 ,2)
@@ -236,33 +311,77 @@ for (.s in levels (d$service.recode)) {
   nrtot <- nri+nrt
   Prtot <- round(nrtot/n2ntot*100,2)
   
-  MCi.rap <- t(sapply(1:6,function(x)BootMCi.rap (.s,paste0("res.theme",x),2000)))
-  MCi.rap<- data.frame(rbind(MCi.rap,BootMCi.rap(.s,"res.score.final",2000)))
-  dimnames<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
-              "commodité de la chambre","restauration hospitalière","score global")
-  int_tel<-data.frame(dimnames,MCi.rap[,1:4]); colnames(int_tel) <-c("thème","N_int","Mean_95%CI_int","N_tel","Mean_95%CI_tel")
-  tot<-data.frame(dimnames,MCi.rap[,5:6]); colnames(tot) <-c("thème","N","Mean_95%CI")
+  # MCi.rap <- t(sapply(1:6,function(x)BootMCi.rap (.s,paste0("res.theme",x),2000)))
+  # MCi.rap<- data.frame(rbind(MCi.rap,BootMCi.rap(.s,"res.score.final",2000)))
+  # 
+  # dimnames<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
+  #             "commodité de la chambre","restauration hospitalière","score global")
+  # int_tel<-data.frame(dimnames,MCi.rap[,1:4]); colnames(int_tel) <-c("thème","int_N","int_Mean[95%CI]","tel_N","tel_Mean[95%CI]")
+  # assign(paste0("int_tel",.s),int_tel)
+  # tot <- data.frame(dimnames,MCi.rap[,5:6]); colnames(tot) <-c("thème","N","Mean[95%CI]")
+  # assign(paste0("tot",.s),tot)
+  # write.xlsx (MCi.rap, file=paste0(.set,"ISATIS_",.s,".xlsx"), col.names=T,row.names=F, sheetName="resultats ISATIS", append=F)    
   
+  int_tel<-get(paste0("int_tel",.s))  #la satisfaction par service a déjà été calculée à l'étape précédente
+  tot<-get(paste0("tot",.s))          #la satisfaction par service a déjà été calculée à l'étape précédente
+  
+  ###RAPPORT
   sink(paste0(.set,"ISATIS_",.s,".txt"))
+  
+  ###rapport par service
   cat (paste (.s, "\n\n"))
   cat(paste0("Patients hostitalisés au moins 2 nuits consécutives (total/internet/telephone) : ",
              n2ntot,"/",n2ni, "/",n2nt,
              "\nPatients répondeurs (total/internet/telephone) : ",
              nrtot,"(",Prtot,"%)","/",nri,"(",Pri,"%)","/",nrt,"(",Prt,"%)"))
   cat("\n\nScore des patients du service (tous modes d'administration confondus)\n")
-  print(tot)
+  print(tot,right=F)
   cat("\n\nDétail par mode d'administration du questionnaire (internet ou téléphone)\n")
   print(int_tel,right=F) #aligne les noms des colonnes à gauche
   cat ("\n\n\n")
-  write.xlsx (MCi.rap, file=paste0(.set,"ISATIS_",.s,".xlsx"), col.names=T,row.names=F, sheetName="resultats ISATIS", append=F)    
+  ###
+  
+  #fréquence tous services confondus: je les crées ici pour éviter de changer tous les noms (très rapide de les recréer à chaque fois)
+  n2ni <- d %>% filter (Duree>=2) %>% summarise(n()) 
+  nri <- d %>% filter (Duree>=2) %>% filter(repondant =="oui" ) %>% summarise(n()) 
+  Pri <- round(nri/n2ni *100 ,2)
+  n2nt <- f %>% filter (Duree>=2)  %>% summarise(n()) 
+  nrt <- f %>% filter (Duree>=2) %>% filter(repondant =="oui") %>% summarise(n()) 
+  Prt <- round(nrt/n2nt *100,2)
+  n2ntot <- n2ni+n2nt
+  nrtot <- nri+nrt
+  Prtot <- round(nrtot/n2ntot*100,2)
+  
+  ###rapport tous services confondus
+  cat ("\n\n\n")
+  cat("Résultats tous services confondus: \n\n")
+  cat(paste0("Patients hostitalisés au moins 2 nuits consécutives (total/internet/telephone) : ",
+             n2ntot,"/",n2ni, "/",n2nt,
+             "\nPatients répondeurs (total/internet/telephone) : ",
+             nrtot,"(",Prtot,"%)","/",nri,"(",Pri,"%)","/",nrt,"(",Prt,"%)"))
+  cat("\n\nScore des patients tous services et tous modes d'administration confondus)\n")
+  print(tot.tot,right=F)
+  cat("\n\nDétail par mode d'administration du questionnaire (internet ou téléphone)\n")
+  print(int_tel.tot,right=F) #aligne les noms des colonnes à gauche
+  ###
+  
   sink()
 }
 
-#tous les services sur la même page
-set.seed(1234)
+###################################
+#RAPPORTS : tous les services sur la même page
+
+
+######satisfaction tous services confondus (attention l'ordre est important par rapport au seed : calcul tous confondus puis calcul par service)
+#déjà calculé: MCi.rap.tot splité en int_tel.tot et tot.tot
+
+######ouverture du rapport
 sink (paste0(.set,"resultats_themes_tous_services.txt"))
+
+######calculs et rapport par service
+set.seed(1234)
 for (.s in levels (d$service.recode)) {
-  
+  #calculs par service
   n2ni <- d %>% filter (Duree>=2) %>% filter(service.recode==.s) %>% summarise(n()) 
   nri <- d %>% filter (Duree>=2) %>% filter(repondant =="oui" & service.recode==.s) %>% summarise(n()) 
   Pri <- round(nri/n2ni *100 ,2)
@@ -273,26 +392,45 @@ for (.s in levels (d$service.recode)) {
   nrtot <- nri+nrt
   Prtot <- round(nrtot/n2ntot*100,2)
   
-  MCi.rap <- t(sapply(1:6,function(x)BootMCi.rap (.s,paste0("res.theme",x),2000)))
-  MCi.rap<- data.frame(rbind(MCi.rap,BootMCi.rap(.s,"res.score.final",2000)))
-  dimnames<-c("Prise en charge globale","information du patient","communication avec professionnels","attitude des professionnels",
-              "commodité de la chambre","restauration hospitalière","score global")
-  int_tel<-data.frame(dimnames,MCi.rap[,1:4]); colnames(int_tel) <-c("thème","N_int","Mean_95%CI_int","N_tel","Mean_95%CI_tel")
-  tot<-data.frame(dimnames,MCi.rap[,5:6]); colnames(tot) <-c("thème","N","Mean_95%CI")
-  
-  #sink(paste0(.set,"ISATIS_",.s,".txt"))
+  int_tel<-get(paste0("int_tel",.s))  #la satisfaction par service a déjà été calculée à l'étape précédente
+  tot<-get(paste0("tot",.s))          #la satisfaction par service a déjà été calculée à l'étape précédente
+
+  #rapport par service (sink hors de la boucle et pas d'écriture de fichier xl)
   cat (paste (.s, "\n\n"))
   cat(paste0("Patients hostitalisés au moins 2 nuits consécutives (total/internet/telephone) : ",
              n2ntot,"/",n2ni, "/",n2nt,
              "\nPatients répondeurs (total/internet/telephone) : ",
              nrtot,"(",Prtot,"%)","/",nri,"(",Pri,"%)","/",nrt,"(",Prt,"%)"))
   cat("\n\nScore des patients du service (tous modes d'administration confondus)\n")
-  print(tot)
+  print(tot,right=F)
   cat("\n\nDétail par mode d'administration du questionnaire (internet ou téléphone)\n")
   print(int_tel,right=F) #aligne les noms des colonnes à gauche
   cat ("\n\n\n")
-  write.xlsx (MCi.rap, file=paste0(.set,"ISATIS_",.s,".xlsx"), col.names=T,row.names=F, sheetName="resultats ISATIS", append=F)    
-  #sink()
 }
+
+######rapports tous services confondus: je les crés ici pour éviter qu'il soit écrasé par fréquence par service
+
+n2ni <- d %>% filter (Duree>=2) %>% summarise(n()) 
+nri <- d %>% filter (Duree>=2) %>% filter(repondant =="oui" ) %>% summarise(n()) 
+Pri <- round(nri/n2ni *100 ,2)
+n2nt <- f %>% filter (Duree>=2)  %>% summarise(n()) 
+nrt <- f %>% filter (Duree>=2) %>% filter(repondant =="oui") %>% summarise(n()) 
+Prt <- round(nrt/n2nt *100,2)
+n2ntot <- n2ni+n2nt
+nrtot <- nri+nrt
+Prtot <- round(nrtot/n2ntot*100,2)
+
+cat ("\n\n\n")
+cat("Résultats tous services confondus: \n\n")
+cat(paste0("Patients hostitalisés au moins 2 nuits consécutives (total/internet/telephone) : ",
+           n2ntot,"/",n2ni, "/",n2nt,
+           "\nPatients répondeurs (total/internet/telephone) : ",
+           nrtot,"(",Prtot,"%)","/",nri,"(",Pri,"%)","/",nrt,"(",Prt,"%)"))
+cat("\n\nScore des patients tous services et tous modes d'administration confondus)\n")
+print(tot.tot,right=F)
+cat("\n\nDétail par mode d'administration du questionnaire (internet ou téléphone)\n")
+print(int_tel.tot,right=F) #aligne les noms des colonnes à gauche
+
+#####fermeture du rapport
 sink()
 

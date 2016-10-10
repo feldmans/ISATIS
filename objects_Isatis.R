@@ -6,6 +6,7 @@
 
 
 
+
 #si gilles : Attention il faudra reenregistrer les tables sous csv
 #filenameinternet<-"/Users/gilles_travail/Documents/Travauxscientifiques/SarahFeldman_Isatis/patients_Internet_150202_0955_Isatis.xlsx"
 #filenametelephone<-"/Users/gilles_travail/Documents/Travauxscientifiques/SarahFeldman_Isatis/patients_telephone_150202_0955_Isatis.xlsx"

@@ -832,6 +832,8 @@ ESfun <- function (.theme) {  #.dat=.df
 
 ###############FONCTIONS POUR LES RAPPORTS PAR SERVICE####################
 
+
+##############calcul des scores de satisfaction et IC par service##############
 #pour test:
 #.theme<-
 #.dat<-.df
@@ -907,7 +909,7 @@ BootMCi.rap <- function (.service,.theme, R) {
 
 
 
-#calcul n, mean, sd, median interquartile
+####non utilisé : calcul n, mean, sd, median interquartile (fun.score appelle scoreestim qui appelle calIC.bootstrap)
 
 calIC.bootstrap<-function(thedata, nrep) {
   mymeans<-rep(NA,nrep);
@@ -938,7 +940,7 @@ scoreestim <- function (x,myname=NULL) {
   return(abc)
 }
 
-#RESULTAT THEME SELON SERVICE
+
 fun.score <- function(service,data) {
   #  browser()
   theme <- data.frame (t (sapply (1:6, function (x) scoreestim (data[data$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
@@ -948,6 +950,7 @@ fun.score <- function(service,data) {
   output
 }
 
+#fonction pas finies...remplacé par bootMCi.rap
 fun.score.IT <- function(service,data_int,data_tel) {
   d <- data_int
   f <- data_tel
@@ -963,6 +966,8 @@ fun.score.IT <- function(service,data_int,data_tel) {
   output
 }
 
+
+#############analyse des données démographiques par service###################
 
 #FREQUENCE SOCIO SELON SERVICE
 #internet et telephone separe
