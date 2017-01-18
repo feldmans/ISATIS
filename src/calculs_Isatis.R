@@ -7,13 +7,26 @@
 
 
 #charger fonctions et librairies
-source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/fonctions_ISATIS.R") 
+#source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/fonctions_ISATIS.R") 
+source("src/fonctions_ISATIS.R") 
 #charger aussi les objects necessaires:
-source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/objects_Isatis.R")
+#source("C:/Users/Sarah/Documents/2016 ete et 2015 hiver/2015 12 SarahFeldman_Isatis/scripts ISATIS/ISATIS/objects_Isatis.R")
+source("src/objects_Isatis.R")
 
+# #A lancer uniquement pour reponse à la review comparaison des scores selon delai de reponse
+# source("src/review_delai.R")
+# #comparaison internet rep avant 1 sem et internet rep après 1 semaine
+# # d : rep internet <  7 jours (sera note "internet" dans le tableau de resultat de score)
+# # f : rep internet >= 7 jours (sera note "telephone" dans le tableau de resultat de score)
 
+# #A lancer uniquement pour reponse à la review comparaison telephone et NE
+# source("src/review_NE.R")
+# #attention pour les tableaux de resultats, telephone reste "telephone" mais NE prend la place de "internet" dans les tableaux de resultats
 
 ########### TABLE 1 : CARACTERISTIQUES DES PATIENTS ############
+num_col <- paste0("socio",c(1,3,6,8,2,4,5,7))
+myname_col <- c("Age","Education","Revenu","Assurance","Sexe","Statut marital","Emploi","Profession")
+
 cbind(num_col[order(num_col)],myname_col[order(num_col)])
 # "Age"            "socio1"
 # "Sexe"           "socio2"
@@ -127,9 +140,9 @@ rownames(quant_sat) <- c(paste0("mean(sd)_res.theme",1:6),"res.global")
 listeQ<-c(1,2,4,13:15,16,18,27:30,3,5,6,17,20,7:11,21:24,25,26) #Questions dans l'ordre des themes
 listtheme<-rep(c(1,2,3,4,5,6), c(6,6,5,5,4,2)) #numero de theme repete x fois: x étant le nombre de questions qu'il contient
 
-#colonne decQ_class qui recode en ok, non conerne ou missing
-for(i in 1:32) d[ ,paste0("decQ_class",i)] <- recode(d[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
-for(i in 1:32) f[ ,paste0("decQ_class",i)] <- recode(f[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
+#colonne decQ_class qui Recode en ok, non conerne ou missing
+for(i in 1:32) d[ ,paste0("decQ_class",i)] <- Recode(d[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
+for(i in 1:32) f[ ,paste0("decQ_class",i)] <- Recode(f[ ,paste0("decQ",i)],"1:5='ok';6:11='nonconc';0='nonconc'")
 
 #tableaux qui donne pour chaque patient son id, son groupe, le resultat pour chaque question (ok, NC ou na)
 #J'inclus dans le tableau tous les patients restés 2 nuits ou plus, repondants et non repondants

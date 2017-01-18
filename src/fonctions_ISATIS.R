@@ -11,13 +11,13 @@ library(RMySQL)
 library(DBI)
 library(ggplot2)
 library(Hmisc)
-library(gtools) #smartbind
+#library(gtools) #smartbind
 library(psy)
 library (dplyr)
 library (boot)
 #library(compute.es)
 #library(MBESS)
-library(cocron)
+#library(cocron)
 
 
 ###### NB : méthodes bootstrap utilisées dans le manuscrit ######
@@ -832,8 +832,6 @@ ESfun <- function (.theme) {  #.dat=.df
 
 ###############FONCTIONS POUR LES RAPPORTS PAR SERVICE####################
 
-
-##############calcul des scores de satisfaction et IC par service##############
 #pour test:
 #.theme<-
 #.dat<-.df
@@ -860,8 +858,8 @@ fun.meantot <- function(data,indices){
 #boot repete la fonction fun.mean R fois : il genere un nouveau .df[indices,] et fait la moyenne. 
 boot.theme.rap <- function (.service,.theme,R){
   .df <- data.frame (
-    score=c (d[d$service.recode==.service, .theme], f[f$service.recode==.service, .theme]),
-    group=c (rep ("int", nrow (d[d$service.recode==.service,])), rep ("tel", nrow (f[f$service.recode==.service,])))
+    score=c (d[d$service.Recode==.service, .theme], f[f$service.Recode==.service, .theme]),
+    group=c (rep ("int", nrow (d[d$service.Recode==.service,])), rep ("tel", nrow (f[f$service.Recode==.service,])))
   )
   .res <- boot(data=.df,statistic=fun.mean,R=R)
   #meantot <- mean(.df$score, na.rm=T)
@@ -884,7 +882,7 @@ BootMCi.rap <- function (.service,.theme, R) {
   colnames (.res) <- c ("CI_L", "CI_U")
   #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
   .res$est <- as.numeric (.bootres$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
-  .res$n<-c(sum(!is.na(d[d$service.recode==.service,.theme])),sum(!is.na(f[f$service.recode==.service,.theme]))) #true(non manquant) vaut 1, donc nb de non NA
+  .res$n<-c(sum(!is.na(d[d$service.Recode==.service,.theme])),sum(!is.na(f[f$service.Recode==.service,.theme]))) #true(non manquant) vaut 1, donc nb de non NA
   ###########
   .n <- length (.restot$t0) #donne le nombre de resultat boot realise : 1 pour internet, 1 pour telephone
   .list.ci <- lapply(1:.n, function(x) boot.ci(.restot,index=x,type="perc")) #fct boot.ci : intervalle de confiance pour chaque boot
@@ -893,7 +891,7 @@ BootMCi.rap <- function (.service,.theme, R) {
   colnames (.tot) <- c ("CI_L", "CI_U")
   #.res$est <- apply (.bootres$t, 2, median) #pour faire la mediane des échantillons
   .tot$est <- as.numeric (.restot$t0) #selectionne l'estimateur et le rajoute au tableau .res : ici moyenne
-  .tot$n<-sum(!is.na(d[d$service.recode==.service,.theme]))+ sum(!is.na(f[f$service.recode==.service,.theme])) #true(non manquant) vaut 1, donc nb de non NA
+  .tot$n<-sum(!is.na(d[d$service.Recode==.service,.theme]))+ sum(!is.na(f[f$service.Recode==.service,.theme])) #true(non manquant) vaut 1, donc nb de non NA
   ############
   .res <- rbind(.res,.tot)
   .res <- .res[, c (4,3, 1, 2)] #remet les colonnes dans l'ordre
@@ -909,7 +907,7 @@ BootMCi.rap <- function (.service,.theme, R) {
 
 
 
-####non utilisé : calcul n, mean, sd, median interquartile (fun.score appelle scoreestim qui appelle calIC.bootstrap)
+#calcul n, mean, sd, median interquartile
 
 calIC.bootstrap<-function(thedata, nrep) {
   mymeans<-rep(NA,nrep);
@@ -940,44 +938,41 @@ scoreestim <- function (x,myname=NULL) {
   return(abc)
 }
 
-
+#RESULTAT THEME SELON SERVICE
 fun.score <- function(service,data) {
   #  browser()
-  theme <- data.frame (t (sapply (1:6, function (x) scoreestim (data[data$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
-  final <- data.frame(t(scoreestim(data[data$service.recode==service,"res.score.final"],"score final")))
+  theme <- data.frame (t (sapply (1:6, function (x) scoreestim (data[data$service.Recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  final <- data.frame(t(scoreestim(data[data$service.Recode==service,"res.score.final"],"score final")))
   output <- rbind(theme,final)
   #  write.table(print(output),file="clipboard",sep="\t",dec=",",row.names=FALSE) 
   output
 }
 
-#fonction pas finies...remplacé par bootMCi.rap
 fun.score.IT <- function(service,data_int,data_tel) {
   d <- data_int
   f <- data_tel
-  tot <- rbind(d[d$service.recode==service , ],f[f$service.recode==service , ])
-  themei <- data.frame (t (sapply (1:6, function (x) scoreestim (d[d$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
-  finali <- data.frame(t(scoreestim(d[d$service.recode==service,"res.score.final"],"score final")))
-  themet <- data.frame (t (sapply (1:6, function (x) scoreestim (f[f$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
-  finalt <- data.frame(t(scoreestim(f[f$service.recode==service,"res.score.final"],"score final")))
-  themeit<- data.frame (t (sapply (1:6, function (x) scoreestim (tot[tot$service.recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
-  finalit<- data.frame(t(scoreestim(tot[tot$service.recode==service,"res.score.final"],"score final")))
+  tot <- rbind(d[d$service.Recode==service , ],f[f$service.Recode==service , ])
+  themei <- data.frame (t (sapply (1:6, function (x) scoreestim (d[d$service.Recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  finali <- data.frame(t(scoreestim(d[d$service.Recode==service,"res.score.final"],"score final")))
+  themet <- data.frame (t (sapply (1:6, function (x) scoreestim (f[f$service.Recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  finalt <- data.frame(t(scoreestim(f[f$service.Recode==service,"res.score.final"],"score final")))
+  themeit<- data.frame (t (sapply (1:6, function (x) scoreestim (tot[tot$service.Recode==service , paste0("res.theme",x)], myname=paste0("theme groupe",x)))))
+  finalit<- data.frame(t(scoreestim(tot[tot$service.Recode==service,"res.score.final"],"score final")))
   
   output <- rbind(theme,final)
   output
 }
 
 
-#############analyse des données démographiques par service###################
-
 #FREQUENCE SOCIO SELON SERVICE
 #internet et telephone separe
 fun.socio3 <- function (service, data){
-  soc1<-summary(data[data$service.recode==service,"Age"])
-  soc2<-table(data[data$service.recode==service,"Sexe"])
-  soc3<-table(data[data$service.recode==service,"socio3"])
-  soc4<-table(data[data$service.recode==service,"socio4"])
-  soc5<-table(data[data$service.recode==service,"socio5"])
-  soc8<-table(data[data$service.recode==service,"socio8"])
+  soc1<-summary(data[data$service.Recode==service,"Age"])
+  soc2<-table(data[data$service.Recode==service,"Sexe"])
+  soc3<-table(data[data$service.Recode==service,"socio3"])
+  soc4<-table(data[data$service.Recode==service,"socio4"])
+  soc5<-table(data[data$service.Recode==service,"socio5"])
+  soc8<-table(data[data$service.Recode==service,"socio8"])
   res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6], "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]")
   res2 <- paste0 ("\n\nSexe=M: ", soc2[2], " (", round (soc2[2]/sum (soc2)*100, 1), "%)")
   res3 <- paste0(c ("jusqu'au 1er cycle secondaire : ", " jusqu'au second cycle secondaire : ", " jusqu'au superieur court ou post secondaire : ", " enseignement superieur : "), soc3," (", round(prop.table(soc3),3)*100,"%)")
@@ -991,18 +986,18 @@ fun.socio3 <- function (service, data){
 #internet et telephone dans meme feuille
 #data1=telephone, data2 = internet
 fun.socio4 <- function (service, data1, data2){
-  soc1<-summary(data1[data1$service.recode==service,"Age"])
-  soc2<-table(data1[data1$service.recode==service,"Sexe"])
-  soc3<-table(data1[data1$service.recode==service,"socio3"])
-  soc4<-table(data1[data1$service.recode==service,"socio4"])
-  soc5<-table(data1[data1$service.recode==service,"socio5"])
-  soc8<-table(data1[data1$service.recode==service,"socio8"])
-  soc1b<-summary(data2[data2$service.recode==service,"Age"])
-  soc2b<-table(data2[data2$service.recode==service,"Sexe"])
-  soc3b<-table(data2[data2$service.recode==service,"socio3"])
-  soc4b<-table(data2[data2$service.recode==service,"socio4"])
-  soc5b<-table(data2[data2$service.recode==service,"socio5"])
-  soc8b<-table(data2[data2$service.recode==service,"socio8"])
+  soc1<-summary(data1[data1$service.Recode==service,"Age"])
+  soc2<-table(data1[data1$service.Recode==service,"Sexe"])
+  soc3<-table(data1[data1$service.Recode==service,"socio3"])
+  soc4<-table(data1[data1$service.Recode==service,"socio4"])
+  soc5<-table(data1[data1$service.Recode==service,"socio5"])
+  soc8<-table(data1[data1$service.Recode==service,"socio8"])
+  soc1b<-summary(data2[data2$service.Recode==service,"Age"])
+  soc2b<-table(data2[data2$service.Recode==service,"Sexe"])
+  soc3b<-table(data2[data2$service.Recode==service,"socio3"])
+  soc4b<-table(data2[data2$service.Recode==service,"socio4"])
+  soc5b<-table(data2[data2$service.Recode==service,"socio5"])
+  soc8b<-table(data2[data2$service.Recode==service,"socio8"])
   res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6]," / ", as.numeric(soc1b)[1],",",as.numeric (soc1b)[6], 
                   "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]", 
                   " / ",as.numeric (soc1b)[3], " [", as.numeric (soc1b)[2], ", ", as.numeric (soc1b)[5], "]")
@@ -1020,18 +1015,18 @@ fun.socio4 <- function (service, data1, data2){
 #data2<-f
 
 fun.socio5 <- function (service, data1, data2){
-  soc1<-summary(data1[data1$service.recode==service,"Age"])
-  soc2<-table(data1[data1$service.recode==service,"Sexe"])
-  soc3<-table(data1[data1$service.recode==service,"socio3"])
-  soc4<-table(data1[data1$service.recode==service,"socio4"])
-  soc5<-table(data1[data1$service.recode==service,"socio5"])
-  soc8<-table(data1[data1$service.recode==service,"socio8"])
-  soc1b<-summary(data2[data2$service.recode==service,"Age"])
-  soc2b<-table(data2[data2$service.recode==service,"Sexe"])
-  soc3b<-table(data2[data2$service.recode==service,"socio3"])
-  soc4b<-table(data2[data2$service.recode==service,"socio4"])
-  soc5b<-table(data2[data2$service.recode==service,"socio5"])
-  soc8b<-table(data2[data2$service.recode==service,"socio8"])
+  soc1<-summary(data1[data1$service.Recode==service,"Age"])
+  soc2<-table(data1[data1$service.Recode==service,"Sexe"])
+  soc3<-table(data1[data1$service.Recode==service,"socio3"])
+  soc4<-table(data1[data1$service.Recode==service,"socio4"])
+  soc5<-table(data1[data1$service.Recode==service,"socio5"])
+  soc8<-table(data1[data1$service.Recode==service,"socio8"])
+  soc1b<-summary(data2[data2$service.Recode==service,"Age"])
+  soc2b<-table(data2[data2$service.Recode==service,"Sexe"])
+  soc3b<-table(data2[data2$service.Recode==service,"socio3"])
+  soc4b<-table(data2[data2$service.Recode==service,"socio4"])
+  soc5b<-table(data2[data2$service.Recode==service,"socio5"])
+  soc8b<-table(data2[data2$service.Recode==service,"socio8"])
   res1 <- paste0 ("Age:\n range: ", as.numeric (soc1)[1], ",", as.numeric (soc1)[6]," / ", as.numeric(soc1b)[1],",",as.numeric (soc1b)[6], 
                   "\n median [IQR]: ", as.numeric (soc1)[3], " [", as.numeric (soc1)[2], ", ", as.numeric (soc1)[5], "]", 
                   " / ",as.numeric (soc1b)[3], " [", as.numeric (soc1b)[2], ", ", as.numeric (soc1b)[5], "]")
