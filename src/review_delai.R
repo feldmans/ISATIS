@@ -1,3 +1,6 @@
+source("src/fonctions_Isatis.R")
+source("src/objects_Isatis.R")
+
 #early responder : délai de réponse strict inferieur à 7 jours
 d$early_resp <- NA
 d$early_resp <- ifelse(d$Isatis_Date2-d$Date_Sortie2<7, 1, d$early_resp)
